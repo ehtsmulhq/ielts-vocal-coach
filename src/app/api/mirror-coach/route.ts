@@ -1,8 +1,10 @@
-import { generateJson } from "@/lib/gemini";
+import { generateJson, generateJsonWithMedia } from "@/lib/gemini";
 
 interface MirrorCoachRequest {
   targetScript: string;
-  candidateSpokenText: string;
+  candidateSpokenText?: string;
+  audioBase64?: string;
+  audioMimeType?: string;
   targetCollocations: { phrase: string; meaning: string }[];
   thoughtChunks: string[];
   durationSeconds: number;
@@ -19,6 +21,7 @@ interface MirrorMistake {
 }
 
 interface MirrorCoachResponse {
+  transcribedSpokenText?: string;
   accuracyScore: number;
   actualWpm: number;
   fluencyRating: "Needs Polish" | "Solid Cadence" | "Master Level Band 9";
@@ -32,6 +35,7 @@ interface MirrorCoachResponse {
 const mirrorCoachSchema = {
   type: "object",
   properties: {
+    transcribedSpokenText: { type: "string" },
     accuracyScore: { type: "number" },
     actualWpm: { type: "number" },
     fluencyRating: {
@@ -78,6 +82,8 @@ export async function POST(request: Request) {
     const {
       targetScript = "",
       candidateSpokenText = "",
+      audioBase64,
+      audioMimeType = "audio/webm",
       targetCollocations = [],
       thoughtChunks = [],
       durationSeconds = 10,
@@ -90,9 +96,10 @@ export async function POST(request: Request) {
     const durationMin = Math.max(0.1, durationSeconds / 60);
     const calculatedWpm = Math.round(spokenWords.length / durationMin);
 
-    // If candidate said almost nothing
-    if (spokenWords.length < 3) {
+    // If candidate said almost nothing and no audio is present
+    if (!audioBase64 && spokenWords.length < 3) {
       const emptyResponse: MirrorCoachResponse = {
+        transcribedSpokenText: candidateSpokenText,
         accuracyScore: 0,
         actualWpm: 0,
         fluencyRating: "Needs Polish",
@@ -116,7 +123,12 @@ export async function POST(request: Request) {
 You are listening to an IELTS candidate who is shadowing their upgraded Band 8.5/9.0 Master Script in the Mirror Gym.
 
 TASK:
-Compare the CANDIDATE'S ACTUAL SPOKEN WORDS against the TARGET MASTER SCRIPT.
+${
+  audioBase64
+    ? "Listen directly to the CANDIDATE'S RECORDED SPOKEN AUDIO. Transcribe their exact spoken words into `transcribedSpokenText`, then compare their spoken delivery against the TARGET MASTER SCRIPT."
+    : "Compare the CANDIDATE'S ACTUAL SPOKEN WORDS against the TARGET MASTER SCRIPT."
+}
+
 Identify specific mistakes the user made (missed collocations, lost cleft structures, omitted breath groups, mispronunciations, or robotic hesitations) and provide targeted vocal coach remediation.
 
 CATEGORY: ${category}
@@ -130,8 +142,12 @@ ${targetCollocations.map((c) => `- "${c.phrase}" (${c.meaning})`).join("\n")}
 RHYTHMIC THOUGHT CHUNKS (NATURAL BREATH UNITS):
 ${thoughtChunks.map((chunk, i) => `[${i + 1}] "${chunk}"`).join("\n")}
 
-CANDIDATE'S ACTUAL SPOKEN DELIVERY (${spokenWords.length} words spoken in ${durationSeconds}s, ${calculatedWpm} WPM):
-"${candidateSpokenText}"
+${
+  candidateSpokenText
+    ? `CLIENT BROWSER ASR TRANSCRIPTION DRAFT (${spokenWords.length} words, ${calculatedWpm} WPM):\n"${candidateSpokenText}"\n`
+    : ""
+}
+DELIVERY DURATION: ${durationSeconds} seconds.
 
 COACHING GUIDELINES:
 1. Objectively compare candidate's delivery with target script:
@@ -147,8 +163,24 @@ COACHING GUIDELINES:
    - A concise, authoritative, warm 2-3 sentence vocal coach spoken response that Dr. Vance will speak aloud to the candidate right now.
    - Example: "Well done on keeping the cadence at 135 words per minute. Notice that you omitted 'indispensable asset' and rushed through the second breath chunk. Listen to my rhythm and take it from the top."`;
 
-    const { data } = await generateJson<MirrorCoachResponse>(prompt, mirrorCoachSchema);
-    return Response.json(data);
+    if (audioBase64) {
+      const contents = [
+        {
+          inlineData: {
+            mimeType: audioMimeType,
+            data: audioBase64,
+          },
+        },
+        {
+          text: prompt,
+        },
+      ];
+      const { data } = await generateJsonWithMedia<MirrorCoachResponse>(contents, mirrorCoachSchema);
+      return Response.json(data);
+    } else {
+      const { data } = await generateJson<MirrorCoachResponse>(prompt, mirrorCoachSchema);
+      return Response.json(data);
+    }
   } catch (err) {
     console.error("[api/mirror-coach]", err);
     return Response.json({ error: (err as Error).message }, { status: 500 });

@@ -30,6 +30,7 @@ interface MirrorMistake {
 }
 
 interface MirrorCoachResponse {
+  transcribedSpokenText?: string;
   accuracyScore: number;
   actualWpm: number;
   fluencyRating: "Needs Polish" | "Solid Cadence" | "Master Level Band 9";
@@ -70,21 +71,34 @@ export function MasterMirrorGym({
   const [coachAnalysis, setCoachAnalysis] = useState<MirrorCoachResponse | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
 
+  const isListeningRef = useRef(false);
   const recognitionRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const items = repository.items;
   const currentItem: ScriptItem = items[activeIndex] || items[0];
 
   const stopListening = () => {
+    isListeningRef.current = false;
     setIsListening(false);
     setMicVolume(0);
 
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
+    }
+
+    if (mediaRecorderRef.current) {
+      try {
+        if (mediaRecorderRef.current.state !== "inactive") {
+          mediaRecorderRef.current.stop();
+        }
+      } catch {}
+      mediaRecorderRef.current = null;
     }
 
     if (streamRef.current) {
@@ -130,20 +144,38 @@ export function MasterMirrorGym({
       ? Math.round(spokenWords.length / (readingSeconds / 60))
       : 0;
 
-  // Start Live Audio Listening & Real-time Speech Recognition
+  // Start Universal Audio Recording + Web Speech API (if supported)
   const startListening = async () => {
     setMicError(null);
     setSpokenTranscript("");
     setCoachAnalysis(null);
     setReadingSeconds(0);
+    audioChunksRef.current = [];
     onStopSpeech?.();
 
-    // 1. Microphone capture & volume meter for audio wave visualization
+    let stream: MediaStream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       streamRef.current = stream;
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      setMicError("Microphone access denied or unavailable. Please grant microphone permission in your browser settings.");
+      return;
+    }
 
+    // 1. AudioContext volume meter for live visual feedback
+    try {
       const audioCtx = new AudioContext();
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
       audioCtxRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
@@ -154,6 +186,7 @@ export function MasterMirrorGym({
       const dataArray = new Uint8Array(bufferLength);
 
       const updateVolume = () => {
+        if (!isListeningRef.current) return;
         analyser.getByteFrequencyData(dataArray);
         let sum = 0;
         for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
@@ -166,61 +199,112 @@ export function MasterMirrorGym({
       console.warn("Could not start AudioContext volume meter:", err);
     }
 
-    // 2. Web Speech API Recognition
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-    if (!SpeechRecognition) {
-      setMicError("Speech recognition not supported in this browser. Please use Chrome or Edge for live AI coaching.");
-      setIsListening(true);
-      return;
-    }
-
+    // 2. Start MediaRecorder (universal audio capture supporting Brave, Chrome, Safari, Edge, Firefox)
     try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-GB";
-
-      recognition.onresult = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        let fullText = "";
-        for (let i = 0; i < event.results.length; i++) {
-          fullText += event.results[i][0].transcript + " ";
-        }
-        setSpokenTranscript(fullText.trim());
+      const mimeType =
+        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
       };
-
-      recognition.onerror = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        if (event.error !== "no-speech") {
-          console.warn("Speech recognition error:", event.error);
-        }
-      };
-
-      recognition.onend = () => {
-        // If still supposed to be listening, restart (keeps connection alive during brief silences)
-        if (recognitionRef.current && isListening) {
-          try {
-            recognition.start();
-          } catch {
-            /* already active */
-          }
-        }
-      };
-
-      recognition.start();
-      recognitionRef.current = recognition;
-      setIsListening(true);
+      recorder.start(250);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = chunks;
     } catch (err) {
-      console.error("SpeechRecognition start error:", err);
-      setMicError((err as Error).message);
+      console.warn("MediaRecorder start error:", err);
     }
+
+    // 3. Optional Web Speech API Recognition for real-time live words preview
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-GB";
+
+        recognition.onresult = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          let fullText = "";
+          for (let i = 0; i < event.results.length; i++) {
+            fullText += event.results[i][0].transcript + " ";
+          }
+          setSpokenTranscript(fullText.trim());
+        };
+
+        recognition.onerror = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          console.warn("Speech recognition notice (MediaRecorder active):", event.error);
+        };
+
+        recognition.onend = () => {
+          if (recognitionRef.current && isListeningRef.current) {
+            try {
+              recognition.start();
+            } catch {}
+          }
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+      } catch (err) {
+        console.warn("SpeechRecognition start error:", err);
+      }
+    }
+
+    isListeningRef.current = true;
+    setIsListening(true);
   };
 
   // Submit Spoken Delivery to AI Coach for Diagnostic Mistakes & Fixes
   const handleAnalyzeDelivery = async () => {
-    stopListening();
+    isListeningRef.current = false;
+    setIsListening(false);
     setIsAnalyzing(true);
     setMicError(null);
+
+    // Stop MediaRecorder and collect final chunks
+    let audioBase64: string | undefined;
+    let audioMimeType = "audio/webm";
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        audioMimeType = mediaRecorderRef.current.mimeType || "audio/webm";
+        await new Promise<void>((resolve) => {
+          if (!mediaRecorderRef.current) return resolve();
+          mediaRecorderRef.current.onstop = () => resolve();
+          mediaRecorderRef.current.stop();
+        });
+      } catch {}
+    }
+
+    // Convert recorded audio chunks to base64 for Gemini multimodal transcription & analysis
+    if (audioChunksRef.current.length > 0) {
+      try {
+        const audioBlob = new Blob(audioChunksRef.current, { type: audioMimeType });
+        if (audioBlob.size > 200) {
+          const buffer = await audioBlob.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          let binary = "";
+          for (let i = 0; i < bytes.length; i += 0x8000) {
+            binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          }
+          audioBase64 = btoa(binary);
+        }
+      } catch (err) {
+        console.warn("Could not encode audio blob to base64:", err);
+      }
+    }
+
+    stopListening();
 
     try {
       const res = await fetch("/api/mirror-coach", {
@@ -229,6 +313,8 @@ export function MasterMirrorGym({
         body: JSON.stringify({
           targetScript: currentItem.upgradedScript,
           candidateSpokenText: spokenTranscript,
+          audioBase64,
+          audioMimeType,
           targetCollocations: currentItem.targetCollocations,
           thoughtChunks: currentItem.thoughtChunks,
           durationSeconds: readingSeconds || 10,
@@ -243,6 +329,10 @@ export function MasterMirrorGym({
 
       const data: MirrorCoachResponse = await res.json();
       setCoachAnalysis(data);
+
+      if (data.transcribedSpokenText && !spokenTranscript) {
+        setSpokenTranscript(data.transcribedSpokenText);
+      }
 
       // Automatically speak Dr. Vance's spoken feedback aloud!
       if (data.drVanceSpokenFeedback && onSpeakText) {
@@ -495,33 +585,47 @@ export function MasterMirrorGym({
 
             {/* Live Volume Meter Bar */}
             {isListening && (
-              <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-                <span>MIC LEVEL:</span>
-                <div className="w-20 h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+              <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
+                <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  MIC ACTIVE:
+                </span>
+                <div className="w-24 h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden border border-zinc-300 dark:border-zinc-700">
                   <div
                     className="h-full bg-emerald-500 transition-all duration-75"
-                    style={{ width: `${Math.round(micVolume * 100)}%` }}
+                    style={{ width: `${Math.max(6, Math.round(micVolume * 100))}%` }}
                   />
                 </div>
-                <span>{readingSeconds}s</span>
+                <span className="font-bold text-zinc-700 dark:text-zinc-300">{readingSeconds}s</span>
               </div>
             )}
           </div>
 
           {/* Quick Guidance */}
-          <div className="text-[10px] text-zinc-400 font-sans italic">
+          <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-sans italic">
             {isListening
-              ? "Read the master script out loud naturally. Dr. Vance will evaluate your cadence and spot mistakes."
+              ? "Read the master script out loud with natural rhythm. Tap Stop when finished to let Dr. Vance analyze."
               : "Tap the microphone, read the upgraded text, then tap Stop to let Dr. Vance analyze."}
           </div>
         </div>
+
+        {/* Listening Active Banner (when waiting for speech or on browsers without live ASR) */}
+        {isListening && !spokenTranscript && (
+          <div className="p-3 border border-emerald-500/30 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200 flex items-center justify-between text-xs font-mono animate-pulse">
+            <div className="flex items-center gap-2">
+              <Mic className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>RECORDING YOUR VOICE... READ THE SCRIPT ALOUD</span>
+            </div>
+            <span className="text-[10px] text-zinc-500 font-bold">{readingSeconds}s</span>
+          </div>
+        )}
 
         {/* Live Audio Transcript Streaming Display */}
         {spokenTranscript && (
           <div className="p-3 border border-emerald-500/20 bg-emerald-500/5 text-emerald-950 dark:text-emerald-200 space-y-1 font-sans text-xs animate-in fade-in">
             <div className="font-mono text-[9px] uppercase font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
               <Mic className="w-3 h-3" />
-              <span>LIVE VOICE DETECTED FROM YOUR MICROPHONE ({spokenWords.length} words):</span>
+              <span>YOUR SPOKEN DELIVERY DETECTED ({spokenWords.length} words):</span>
             </div>
             <p className="font-serif italic text-xs leading-relaxed text-zinc-800 dark:text-zinc-200">
               &ldquo;{spokenTranscript}&rdquo;

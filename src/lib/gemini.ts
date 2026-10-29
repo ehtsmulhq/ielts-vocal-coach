@@ -86,3 +86,37 @@ export async function generateJson<T>(prompt: string, schema: object): Promise<{
   }
   throw lastError instanceof Error ? lastError : new Error("All text models failed");
 }
+
+/**
+ * Generates structured JSON supporting multimodal content (e.g. audio chunks, images, text parts).
+ */
+export async function generateJsonWithMedia<T>(
+  contents: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  schema: object,
+  systemInstruction?: string
+): Promise<{ data: T; model: string }> {
+  const ai = getClient();
+  let lastError: unknown;
+  for (const model of TEXT_MODELS) {
+    try {
+      const res = await ai.models.generateContent({
+        model,
+        contents,
+        config: {
+          responseMimeType: "application/json",
+          responseJsonSchema: schema,
+          temperature: 0.7,
+          systemInstruction:
+            systemInstruction ||
+            "You are Dr. Jonathan Vance, a Senior British Vocal Coach and Cambridge IELTS Chief Examiner.",
+        },
+      });
+      if (!res.text) throw new Error("Empty response");
+      return { data: safeParseJson<T>(res.text), model };
+    } catch (err) {
+      lastError = err;
+      console.warn(`[gemini] ${model} multimodal failed, trying next:`, (err as Error).message?.slice(0, 200));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("All multimodal models failed");
+}
