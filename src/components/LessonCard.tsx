@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Lesson, Stage } from "@/lib/types";
 import {
   Volume2,
@@ -20,9 +20,11 @@ interface LessonCardProps {
   currentStage: Stage;
   activeQuestionIdx?: number;
   autoAdvanceNotice?: string | null;
+  onSelectQuestion?: (idx: number) => void;
   onSpeakText?: (text: string, rate?: number) => void;
   onStopSpeech?: () => void;
   isCoachSpeaking?: boolean;
+  isTutorSpeaking?: boolean;
   studentWordCount?: number;
 }
 
@@ -31,9 +33,11 @@ export function LessonCard({
   currentStage,
   activeQuestionIdx = 0,
   autoAdvanceNotice,
+  onSelectQuestion,
   onSpeakText,
   onStopSpeech,
   isCoachSpeaking,
+  isTutorSpeaking,
   studentWordCount = 0,
 }: LessonCardProps) {
   const exam = lesson.hotSeatTest || lesson.ieltsExam;
@@ -45,9 +49,21 @@ export function LessonCard({
   // Part 2 Speaking Stopwatch
   const [speechSeconds, setSpeechSeconds] = useState(0);
 
-  // Active question highlight for Part 1 & Part 3 (fallback to manual if clicked)
-  const [selectedQuestionIdx, setSelectedQuestionIdx] = useState<number | null>(null);
-  const effectiveQuestionIdx = selectedQuestionIdx !== null ? selectedQuestionIdx : activeQuestionIdx;
+  // Active question highlight for Part 1 & Part 3 (voice leads, manual overrides only for current turn)
+  const [userSelectedIdx, setUserSelectedIdx] = useState<{ idx: number; forActive: number } | null>(null);
+  const effectiveQuestionIdx =
+    userSelectedIdx && userSelectedIdx.forActive === activeQuestionIdx
+      ? userSelectedIdx.idx
+      : activeQuestionIdx;
+  const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Automatically scroll into view alongside the examiner's voice
+  useEffect(() => {
+    const el = questionRefs.current[activeQuestionIdx];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [activeQuestionIdx]);
 
   // Prep timer ticker
   useEffect(() => {
@@ -139,10 +155,16 @@ export function LessonCard({
               return (
                 <div
                   key={idx}
-                  onClick={() => setSelectedQuestionIdx(idx)}
+                  ref={(el) => {
+                    questionRefs.current[idx] = el;
+                  }}
+                  onClick={() => {
+                    setUserSelectedIdx({ idx, forActive: activeQuestionIdx });
+                    onSelectQuestion?.(idx);
+                  }}
                   className={`p-3.5 border transition-all cursor-pointer ${
                     isActive
-                      ? "border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 ring-1 ring-zinc-900 dark:ring-zinc-100 shadow-xs"
+                      ? "border-amber-500 dark:border-amber-400 bg-white dark:bg-zinc-950 ring-2 ring-amber-500/30 dark:ring-amber-400/30 shadow-md scale-[1.01]"
                       : isPast
                       ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 opacity-75"
                       : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/10 opacity-55 hover:opacity-85"
@@ -160,9 +182,9 @@ export function LessonCard({
 
                         <div className="flex items-center gap-2 pt-0.5">
                           {isActive && (
-                            <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono text-[9px] uppercase font-bold flex items-center gap-1 border border-amber-500/20">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                              <span>CURRENT INQUIRY</span>
+                            <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono text-[9px] uppercase font-bold flex items-center gap-1.5 border border-amber-500/30">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                              <span>{isTutorSpeaking ? "🎙️ EXAMINER ASKING THIS INQUIRY" : "🎙️ CURRENT INQUIRY • YOUR TURN"}</span>
                             </span>
                           )}
                           {isPast && (
@@ -185,6 +207,8 @@ export function LessonCard({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          setUserSelectedIdx({ idx, forActive: activeQuestionIdx });
+                          onSelectQuestion?.(idx);
                           if (isCoachSpeaking) {
                             onStopSpeech?.();
                           } else {
@@ -367,10 +391,16 @@ export function LessonCard({
               return (
                 <div
                   key={idx}
-                  onClick={() => setSelectedQuestionIdx(idx)}
+                  ref={(el) => {
+                    questionRefs.current[idx] = el;
+                  }}
+                  onClick={() => {
+                    setUserSelectedIdx({ idx, forActive: activeQuestionIdx });
+                    onSelectQuestion?.(idx);
+                  }}
                   className={`p-3.5 border transition-all cursor-pointer ${
                     isActive
-                      ? "border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 ring-1 ring-zinc-900 dark:ring-zinc-100 shadow-xs"
+                      ? "border-amber-500 dark:border-amber-400 bg-white dark:bg-zinc-950 ring-2 ring-amber-500/30 dark:ring-amber-400/30 shadow-md scale-[1.01]"
                       : isPast
                       ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 opacity-75"
                       : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/10 opacity-55 hover:opacity-85"
@@ -388,9 +418,9 @@ export function LessonCard({
 
                         <div className="flex items-center gap-2 pt-0.5">
                           {isActive && (
-                            <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono text-[9px] uppercase font-bold flex items-center gap-1 border border-amber-500/20">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                              <span>CURRENT INQUIRY</span>
+                            <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono text-[9px] uppercase font-bold flex items-center gap-1.5 border border-amber-500/30">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                              <span>{isTutorSpeaking ? "🎙️ EXAMINER ASKING THIS INQUIRY" : "🎙️ CURRENT INQUIRY • YOUR TURN"}</span>
                             </span>
                           )}
                           {isPast && (
@@ -413,6 +443,8 @@ export function LessonCard({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          setUserSelectedIdx({ idx, forActive: activeQuestionIdx });
+                          onSelectQuestion?.(idx);
                           if (isCoachSpeaking) {
                             onStopSpeech?.();
                           } else {

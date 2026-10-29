@@ -34,6 +34,7 @@ import {
 } from "@/lib/test-history";
 import { LIVE_MODEL } from "@/lib/models";
 import { examinerInstruction, STAGE_CUES } from "@/lib/prompts";
+import { findSpokenQuestionIndex, detectSpokenStageTransition } from "@/lib/voice-tracking";
 import { LiveSession, type LiveStatus, type MicMode } from "@/lib/live-session";
 import { SpeechEngine } from "@/lib/speech-engine";
 import { SetupCard } from "@/components/SetupCard";
@@ -103,6 +104,8 @@ export default function Home() {
   const [autoAdvanceNotice, setAutoAdvanceNotice] = useState<string | null>(null);
   const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const handleNextStageRef = useRef<() => void>(() => {});
+  const handleFinishSessionRef = useRef<() => void>(() => {});
 
   // First-time interactive candidate grill intake modal (derived state, no effect)
   const [isGrillDismissed, setIsGrillDismissed] = useState(false);
@@ -250,68 +253,118 @@ export default function Home() {
             }
 
             transcriptRef.current = nextEntries;
-
-            // Running word count for candidate in active stage
-            if (role === "student") {
-              const activeStageStudentWords = nextEntries
-                .filter((t) => t.role === "student" && t.stage === activeStage)
-                .reduce((acc, t) => acc + t.text.trim().split(/\s+/).filter(Boolean).length, 0);
-              setStudentWordCount(activeStageStudentWords);
-            }
-
             return nextEntries;
           });
+
+          // Running word count for candidate in active stage
+          if (role === "student") {
+            const activeStageStudentWords = transcriptRef.current
+              .filter((t) => t.role === "student" && t.stage === activeStage)
+              .reduce((acc, t) => acc + t.text.trim().split(/\s+/).filter(Boolean).length, 0);
+            setStudentWordCount(activeStageStudentWords);
+          }
+
+          // REAL-TIME VOICE TRACKING: Move alongside Dr. Jonathan Vance's speech
+          if (role === "tutor") {
+            const currentEntries = transcriptRef.current;
+            const lastEntry = currentEntries[currentEntries.length - 1];
+            const fullTutorSpeech = (lastEntry && lastEntry.role === "tutor") ? lastEntry.text : text;
+
+            // 1. Spoken verbal stage transition detection
+            const spokenTransition = detectSpokenStageTransition(fullTutorSpeech);
+            if (spokenTransition === "part2" && currentStageRef.current === "part1") {
+              if (!autoAdvanceTimerRef.current) {
+                setAutoAdvanceNotice("DR. VANCE ADVANCING TO PART 2 CUE CARD...");
+                autoAdvanceTimerRef.current = setTimeout(() => {
+                  autoAdvanceTimerRef.current = null;
+                  setAutoAdvanceNotice(null);
+                  handleNextStageRef.current();
+                }, 1500);
+              }
+            } else if (spokenTransition === "part3" && currentStageRef.current === "part2") {
+              if (!autoAdvanceTimerRef.current) {
+                setAutoAdvanceNotice("DR. VANCE ADVANCING TO PART 3 DISCUSSION...");
+                autoAdvanceTimerRef.current = setTimeout(() => {
+                  autoAdvanceTimerRef.current = null;
+                  setAutoAdvanceNotice(null);
+                  handleNextStageRef.current();
+                }, 1500);
+              }
+            } else if (spokenTransition === "finish" && currentStageRef.current === "part3") {
+              if (!autoAdvanceTimerRef.current) {
+                setAutoAdvanceNotice("DR. VANCE CONCLUDING INTERVIEW • EVALUATING...");
+                autoAdvanceTimerRef.current = setTimeout(() => {
+                  autoAdvanceTimerRef.current = null;
+                  setAutoAdvanceNotice(null);
+                  handleFinishSessionRef.current();
+                }, 1500);
+              }
+            }
+
+            // 2. Real-time spoken question detection (synchronizes visual card with audio)
+            if (activeStage === "part1") {
+              const questions = generatedLesson.hotSeatTest?.part1Questions || [];
+              const matchedIdx = findSpokenQuestionIndex(fullTutorSpeech, questions);
+              if (matchedIdx !== null) {
+                setActiveQuestionIdx((curr) => (curr !== matchedIdx ? matchedIdx : curr));
+              }
+            } else if (activeStage === "part3") {
+              const questions = generatedLesson.hotSeatTest?.part3Questions || [];
+              const matchedIdx = findSpokenQuestionIndex(fullTutorSpeech, questions);
+              if (matchedIdx !== null) {
+                setActiveQuestionIdx((curr) => (curr !== matchedIdx ? matchedIdx : curr));
+              }
+            }
+          }
         },
         onTurnComplete: () => {
           setTutorSpeaking(false);
 
-          // Dynamic question advancement & automatic phase transition
+          // Fallback turn counter & automatic progression
           const activeStage = currentStageRef.current;
           const currentEntries = transcriptRef.current;
 
           const studentTurns = currentEntries.filter(
-            (t) => t.role === "student" && t.stage === activeStage && t.text.trim().split(/\s+/).length >= 6
+            (t) => t.role === "student" && t.stage === activeStage && t.text.trim().split(/\s+/).length >= 4
           );
           const studentTurnCount = studentTurns.length;
 
           if (activeStage === "part1") {
             const totalPart1 = generatedLesson.hotSeatTest?.part1Questions?.length || 3;
-            const nextIdx = Math.min(studentTurnCount, totalPart1 - 1);
-            setActiveQuestionIdx(nextIdx);
+            setActiveQuestionIdx((curr) => Math.max(curr, Math.min(studentTurnCount, totalPart1 - 1)));
 
             if (studentTurnCount >= totalPart1 && !autoAdvanceTimerRef.current) {
               setAutoAdvanceNotice("PART 1 COMPLETE • ADVANCING TO PART 2 CUE CARD IN 3s...");
               autoAdvanceTimerRef.current = setTimeout(() => {
                 autoAdvanceTimerRef.current = null;
                 setAutoAdvanceNotice(null);
-                handleNextStage();
-              }, 3000);
+                handleNextStageRef.current();
+              }, 2500);
             }
           } else if (activeStage === "part2") {
             const studentPart2Words = currentEntries
               .filter((t) => t.role === "student" && t.stage === "part2")
               .reduce((acc, t) => acc + t.text.trim().split(/\s+/).filter(Boolean).length, 0);
 
-            if (studentPart2Words >= 60 && !autoAdvanceTimerRef.current) {
+            if (studentPart2Words >= 50 && !autoAdvanceTimerRef.current) {
               setAutoAdvanceNotice("PART 2 MONOLOGUE COMPLETE • ADVANCING TO PART 3 DISCUSSION IN 3s...");
               autoAdvanceTimerRef.current = setTimeout(() => {
                 autoAdvanceTimerRef.current = null;
                 setAutoAdvanceNotice(null);
-                handleNextStage();
-              }, 3000);
+                handleNextStageRef.current();
+              }, 2500);
             }
           } else if (activeStage === "part3") {
             const totalPart3 = generatedLesson.hotSeatTest?.part3Questions?.length || 3;
-            const nextIdx = Math.min(studentTurnCount, totalPart3 - 1);
-            setActiveQuestionIdx(nextIdx);
+            setActiveQuestionIdx((curr) => Math.max(curr, Math.min(studentTurnCount, totalPart3 - 1)));
 
             if (studentTurnCount >= totalPart3 && !autoAdvanceTimerRef.current) {
               setAutoAdvanceNotice("CAMBRIDGE INTERVIEW CONCLUDED • EVALUATING PERFORMANCE IN 2s...");
               autoAdvanceTimerRef.current = setTimeout(() => {
                 autoAdvanceTimerRef.current = null;
                 setAutoAdvanceNotice(null);
-                handleFinishSession();
-              }, 2500);
+                handleFinishSessionRef.current();
+              }, 2000);
             }
           }
         },
@@ -549,6 +602,11 @@ export default function Home() {
       setIsGrading(false);
     }
   };
+
+  useEffect(() => {
+    handleNextStageRef.current = handleNextStage;
+    handleFinishSessionRef.current = handleFinishSession;
+  });
 
   const handleRestart = () => {
     if (autoAdvanceTimerRef.current) {
@@ -811,9 +869,11 @@ export default function Home() {
                     currentStage={currentStage}
                     activeQuestionIdx={activeQuestionIdx}
                     autoAdvanceNotice={autoAdvanceNotice}
+                    onSelectQuestion={(idx) => setActiveQuestionIdx(idx)}
                     onSpeakText={handleSpeakCoachText}
                     onStopSpeech={handleStopCoachText}
                     isCoachSpeaking={isCoachTtsSpeaking}
+                    isTutorSpeaking={tutorSpeaking}
                     studentWordCount={studentWordCount}
                   />
                 ) : (
