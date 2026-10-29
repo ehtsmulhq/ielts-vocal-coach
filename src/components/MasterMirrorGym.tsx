@@ -612,7 +612,7 @@ export function MasterMirrorGym({
       )}
 
       {coachAnalysis && (
-        <div className="p-5 border-2 border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 space-y-4 animate-in fade-in shadow-md">
+        <div className="p-5 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4 animate-in fade-in shadow-md">
           {/* Diagnostic Header */}
           <div className="flex flex-wrap items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3 gap-2 font-mono text-xs">
             <div className="flex items-center gap-2">

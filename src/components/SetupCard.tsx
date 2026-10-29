@@ -203,11 +203,11 @@ export function SetupCard({
               <button
                 type="button"
                 onClick={onOpenGrill}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono border border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-950 hover:bg-zinc-900 hover:text-white dark:hover:bg-zinc-100 dark:hover:text-zinc-900 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
                 title="Re-run the intake grill to extract fresh personal anchors"
               >
                 <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>[ 🎙️ CANDIDATE GRILL ]</span>
+                <span>[ CANDIDATE GRILL ]</span>
               </button>
             )}
 

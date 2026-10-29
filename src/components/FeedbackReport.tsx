@@ -127,7 +127,7 @@ export function FeedbackReport({
       {/* DAY-OVER-DAY IMPROVEMENT DELTA & CONCRETE WINS */}
       {/* ============================================================== */}
       {improvementDelta && (
-        <div className="p-5 border-2 border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 space-y-3 shadow-xs">
+        <div className="p-5 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3 shadow-xs">
           <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold tracking-wider text-zinc-900 dark:text-zinc-100 pb-2 border-b border-zinc-200 dark:border-zinc-800">
             <span className="flex items-center gap-1.5">
               <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />

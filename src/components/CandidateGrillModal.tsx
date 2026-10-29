@@ -50,7 +50,7 @@ export function CandidateGrillModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-300 font-sans">
-      <div className="bg-white dark:bg-zinc-950 border-2 border-zinc-900 dark:border-zinc-100 w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Examiner Header */}
         <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-900 text-white flex items-center justify-between font-mono text-xs">
           <div className="flex items-center gap-2">

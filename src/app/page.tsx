@@ -893,7 +893,7 @@ export default function Home() {
         {/* View 3: Master Script Upgrade Pipeline */}
         {view === "upgrading" && (
           <div className="h-full w-full flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto font-mono space-y-5 animate-in fade-in">
-            <div className="w-14 h-14 border-2 border-zinc-900 dark:border-zinc-100 flex items-center justify-center text-zinc-900 dark:text-zinc-100 animate-pulse">
+            <div className="w-14 h-14 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center text-zinc-900 dark:text-zinc-100 animate-pulse">
               <Sparkles className="w-7 h-7 text-amber-500" />
             </div>
             <div className="space-y-2">
