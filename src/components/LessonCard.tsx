@@ -12,11 +12,14 @@ import {
   Pause,
   MessageSquare,
   Award,
+  CheckCircle2,
 } from "lucide-react";
 
 interface LessonCardProps {
   lesson: Lesson;
   currentStage: Stage;
+  activeQuestionIdx?: number;
+  autoAdvanceNotice?: string | null;
   onSpeakText?: (text: string, rate?: number) => void;
   onStopSpeech?: () => void;
   isCoachSpeaking?: boolean;
@@ -26,6 +29,8 @@ interface LessonCardProps {
 export function LessonCard({
   lesson,
   currentStage,
+  activeQuestionIdx = 0,
+  autoAdvanceNotice,
   onSpeakText,
   onStopSpeech,
   isCoachSpeaking,
@@ -40,8 +45,9 @@ export function LessonCard({
   // Part 2 Speaking Stopwatch
   const [speechSeconds, setSpeechSeconds] = useState(0);
 
-  // Active question highlight for Part 1 & Part 3
-  const [activeQuestionIdx, setActiveQuestionIdx] = useState(0);
+  // Active question highlight for Part 1 & Part 3 (fallback to manual if clicked)
+  const [selectedQuestionIdx, setSelectedQuestionIdx] = useState<number | null>(null);
+  const effectiveQuestionIdx = selectedQuestionIdx !== null ? selectedQuestionIdx : activeQuestionIdx;
 
   // Prep timer ticker
   useEffect(() => {
@@ -91,6 +97,16 @@ export function LessonCard({
         </div>
       </div>
 
+      {/* Auto-Advance Notification Banner */}
+      {autoAdvanceNotice && (
+        <div className="p-3 border border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs font-mono flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span className="font-bold uppercase tracking-wider">{autoAdvanceNotice}</span>
+          </div>
+        </div>
+      )}
+
       {/* ============================================================== */}
       {/* PART 1: INTRODUCTION & IDENTITY INTERVIEW */}
       {/* ============================================================== */}
@@ -109,31 +125,59 @@ export function LessonCard({
             </p>
           </div>
 
-          {/* Official Inquiries List */}
+          {/* Official Inquiries List with Dynamic Highlighting */}
           <div className="space-y-2.5">
-            <div className="text-[10px] font-mono uppercase text-zinc-500 font-bold tracking-wider">
-              OFFICIAL EXAMINER INQUIRIES:
+            <div className="flex items-center justify-between text-[10px] font-mono uppercase text-zinc-500 font-bold tracking-wider">
+              <span>OFFICIAL EXAMINER INQUIRIES:</span>
+              <span>QUESTION {effectiveQuestionIdx + 1} OF {exam.part1Questions.length}</span>
             </div>
             {exam.part1Questions.map((q, idx) => {
-              const isActive = activeQuestionIdx === idx;
+              const isActive = effectiveQuestionIdx === idx;
+              const isPast = idx < effectiveQuestionIdx;
+              const isFuture = idx > effectiveQuestionIdx;
+
               return (
                 <div
                   key={idx}
-                  onClick={() => setActiveQuestionIdx(idx)}
+                  onClick={() => setSelectedQuestionIdx(idx)}
                   className={`p-3.5 border transition-all cursor-pointer ${
                     isActive
-                      ? "border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 shadow-xs"
-                      : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 hover:border-zinc-400"
+                      ? "border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 ring-1 ring-zinc-900 dark:ring-zinc-100 shadow-xs"
+                      : isPast
+                      ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 opacity-75"
+                      : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/10 opacity-55 hover:opacity-85"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2.5">
+                    <div className="flex items-start gap-2.5 flex-1">
                       <span className="font-mono text-xs font-bold text-zinc-400 mt-0.5">
                         0{idx + 1}.
                       </span>
-                      <p className="font-serif text-sm sm:text-base text-zinc-900 dark:text-zinc-100 font-medium leading-snug">
-                        &ldquo;{q}&rdquo;
-                      </p>
+                      <div className="space-y-1 flex-1">
+                        <p className="font-serif text-sm sm:text-base text-zinc-900 dark:text-zinc-100 font-medium leading-snug">
+                          &ldquo;{q}&rdquo;
+                        </p>
+
+                        <div className="flex items-center gap-2 pt-0.5">
+                          {isActive && (
+                            <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono text-[9px] uppercase font-bold flex items-center gap-1 border border-amber-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <span>CURRENT INQUIRY</span>
+                            </span>
+                          )}
+                          {isPast && (
+                            <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono text-[9px] uppercase font-bold flex items-center gap-1 border border-emerald-500/20">
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              <span>COMPLETED</span>
+                            </span>
+                          )}
+                          {isFuture && (
+                            <span className="font-mono text-[9px] text-zinc-400">
+                              [ UPCOMING ]
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {onSpeakText && (
@@ -309,31 +353,59 @@ export function LessonCard({
             </p>
           </div>
 
-          {/* Deep Analytical Inquiries */}
+          {/* Deep Analytical Inquiries with Dynamic Highlighting */}
           <div className="space-y-2.5">
-            <div className="text-[10px] font-mono uppercase text-zinc-500 font-bold tracking-wider">
-              ANALYTICAL DISCUSSION PROMPTS:
+            <div className="flex items-center justify-between text-[10px] font-mono uppercase text-zinc-500 font-bold tracking-wider">
+              <span>ANALYTICAL DISCUSSION PROMPTS:</span>
+              <span>QUESTION {effectiveQuestionIdx + 1} OF {exam.part3Questions.length}</span>
             </div>
             {exam.part3Questions.map((q, idx) => {
-              const isActive = activeQuestionIdx === idx;
+              const isActive = effectiveQuestionIdx === idx;
+              const isPast = idx < effectiveQuestionIdx;
+              const isFuture = idx > effectiveQuestionIdx;
+
               return (
                 <div
                   key={idx}
-                  onClick={() => setActiveQuestionIdx(idx)}
+                  onClick={() => setSelectedQuestionIdx(idx)}
                   className={`p-3.5 border transition-all cursor-pointer ${
                     isActive
-                      ? "border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 shadow-xs"
-                      : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 hover:border-zinc-400"
+                      ? "border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 ring-1 ring-zinc-900 dark:ring-zinc-100 shadow-xs"
+                      : isPast
+                      ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 opacity-75"
+                      : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/10 opacity-55 hover:opacity-85"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2.5">
+                    <div className="flex items-start gap-2.5 flex-1">
                       <span className="font-mono text-xs font-bold text-zinc-400 mt-0.5">
                         0{idx + 1}.
                       </span>
-                      <p className="font-serif text-sm sm:text-base text-zinc-900 dark:text-zinc-100 font-medium leading-snug">
-                        &ldquo;{q}&rdquo;
-                      </p>
+                      <div className="space-y-1 flex-1">
+                        <p className="font-serif text-sm sm:text-base text-zinc-900 dark:text-zinc-100 font-medium leading-snug">
+                          &ldquo;{q}&rdquo;
+                        </p>
+
+                        <div className="flex items-center gap-2 pt-0.5">
+                          {isActive && (
+                            <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono text-[9px] uppercase font-bold flex items-center gap-1 border border-amber-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <span>CURRENT INQUIRY</span>
+                            </span>
+                          )}
+                          {isPast && (
+                            <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono text-[9px] uppercase font-bold flex items-center gap-1 border border-emerald-500/20">
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              <span>COMPLETED</span>
+                            </span>
+                          )}
+                          {isFuture && (
+                            <span className="font-mono text-[9px] text-zinc-400">
+                              [ UPCOMING ]
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {onSpeakText && (

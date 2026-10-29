@@ -47,6 +47,7 @@ export interface CandidateProfile {
   unwindingHabit: string;
   targetBand: TargetBand;
   examPurpose: string;
+  hasCompletedGrill?: boolean;
   lastUpdated?: number;
 }
 
@@ -65,6 +66,7 @@ export const DEFAULT_PROFILE: CandidateProfile = {
   unwindingHabit: "cooking from scratch with fresh produce and reading speculative fiction",
   targetBand: "7.5",
   examPurpose: "postgraduate study admission and professional international relocation",
+  hasCompletedGrill: false,
   lastUpdated: Date.now(),
 };
 

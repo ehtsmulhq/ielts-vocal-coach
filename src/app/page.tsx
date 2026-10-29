@@ -21,6 +21,7 @@ import {
   getMasterScriptSnapshot,
   getMasterScriptServerSnapshot,
   saveMasterScript,
+  resetMasterScript,
   type MasterScriptRepository,
 } from "@/lib/master-script";
 import {
@@ -42,6 +43,7 @@ import { TranscriptFeed } from "@/components/TranscriptFeed";
 import { FeedbackReport } from "@/components/FeedbackReport";
 import { LatencyHUD } from "@/components/LatencyHUD";
 import { MasterMirrorGym } from "@/components/MasterMirrorGym";
+import { CandidateGrillModal } from "@/components/CandidateGrillModal";
 import {
   ArrowRight,
   AlertTriangle,
@@ -95,6 +97,17 @@ export default function Home() {
 
   // Right card tab: "lesson" | "transcript"
   const [activeRightTab, setActiveRightTab] = useState<"lesson" | "transcript">("lesson");
+
+  // Dynamic question highlight & Auto-advance stage management
+  const [activeQuestionIdx, setActiveQuestionIdx] = useState(0);
+  const [autoAdvanceNotice, setAutoAdvanceNotice] = useState<string | null>(null);
+  const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptRef = useRef<TranscriptEntry[]>([]);
+
+  // First-time interactive candidate grill intake modal (derived state, no effect)
+  const [isGrillDismissed, setIsGrillDismissed] = useState(false);
+  const [isGrillManuallyOpen, setIsGrillManuallyOpen] = useState(false);
+  const shouldShowGrill = isGrillManuallyOpen || (!profile.hasCompletedGrill && !isGrillDismissed);
 
   // Session duration timer
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -204,6 +217,9 @@ export default function Home() {
       // Step 3: Instantiate LiveSession
       setLoadingStep("Connecting live British RP Examiner...");
       setTranscript([]);
+      transcriptRef.current = [];
+      setActiveQuestionIdx(0);
+      setAutoAdvanceNotice(null);
       currentStageRef.current = "part1";
       setCurrentStage("part1");
       setSessionSeconds(0);
@@ -233,6 +249,8 @@ export default function Home() {
               ];
             }
 
+            transcriptRef.current = nextEntries;
+
             // Running word count for candidate in active stage
             if (role === "student") {
               const activeStageStudentWords = nextEntries
@@ -246,6 +264,56 @@ export default function Home() {
         },
         onTurnComplete: () => {
           setTutorSpeaking(false);
+
+          // Dynamic question advancement & automatic phase transition
+          const activeStage = currentStageRef.current;
+          const currentEntries = transcriptRef.current;
+
+          const studentTurns = currentEntries.filter(
+            (t) => t.role === "student" && t.stage === activeStage && t.text.trim().split(/\s+/).length >= 6
+          );
+          const studentTurnCount = studentTurns.length;
+
+          if (activeStage === "part1") {
+            const totalPart1 = generatedLesson.hotSeatTest?.part1Questions?.length || 3;
+            const nextIdx = Math.min(studentTurnCount, totalPart1 - 1);
+            setActiveQuestionIdx(nextIdx);
+
+            if (studentTurnCount >= totalPart1 && !autoAdvanceTimerRef.current) {
+              setAutoAdvanceNotice("PART 1 COMPLETE • ADVANCING TO PART 2 CUE CARD IN 3s...");
+              autoAdvanceTimerRef.current = setTimeout(() => {
+                autoAdvanceTimerRef.current = null;
+                setAutoAdvanceNotice(null);
+                handleNextStage();
+              }, 3000);
+            }
+          } else if (activeStage === "part2") {
+            const studentPart2Words = currentEntries
+              .filter((t) => t.role === "student" && t.stage === "part2")
+              .reduce((acc, t) => acc + t.text.trim().split(/\s+/).filter(Boolean).length, 0);
+
+            if (studentPart2Words >= 60 && !autoAdvanceTimerRef.current) {
+              setAutoAdvanceNotice("PART 2 MONOLOGUE COMPLETE • ADVANCING TO PART 3 DISCUSSION IN 3s...");
+              autoAdvanceTimerRef.current = setTimeout(() => {
+                autoAdvanceTimerRef.current = null;
+                setAutoAdvanceNotice(null);
+                handleNextStage();
+              }, 3000);
+            }
+          } else if (activeStage === "part3") {
+            const totalPart3 = generatedLesson.hotSeatTest?.part3Questions?.length || 3;
+            const nextIdx = Math.min(studentTurnCount, totalPart3 - 1);
+            setActiveQuestionIdx(nextIdx);
+
+            if (studentTurnCount >= totalPart3 && !autoAdvanceTimerRef.current) {
+              setAutoAdvanceNotice("CAMBRIDGE INTERVIEW CONCLUDED • EVALUATING PERFORMANCE IN 2s...");
+              autoAdvanceTimerRef.current = setTimeout(() => {
+                autoAdvanceTimerRef.current = null;
+                setAutoAdvanceNotice(null);
+                handleFinishSession();
+              }, 2500);
+            }
+          }
         },
         onMicVolume: (vol) => {
           setMicVolume(vol);
@@ -337,13 +405,20 @@ export default function Home() {
   };
 
   const handleNextStage = () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvanceNotice(null);
     speechEngineRef.current?.stopSpeaking();
+    setActiveQuestionIdx(0);
+    setStudentWordCount(0);
+
     const curIdx = STAGES.findIndex((s) => s.id === currentStageRef.current);
     if (curIdx < STAGES.length - 1) {
       const nextStage = STAGES[curIdx + 1].id;
       currentStageRef.current = nextStage;
       setCurrentStage(nextStage);
-      setStudentWordCount(0);
       sessionRef.current?.sendText(STAGE_CUES[nextStage]);
     } else {
       handleFinishSession();
@@ -351,6 +426,11 @@ export default function Home() {
   };
 
   const handleFinishSession = async () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvanceNotice(null);
     sessionRef.current?.stop();
     speechEngineRef.current?.cleanup();
     setLiveStatus("closed");
@@ -471,12 +551,19 @@ export default function Home() {
   };
 
   const handleRestart = () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvanceNotice(null);
+    setActiveQuestionIdx(0);
     sessionRef.current?.stop();
     speechEngineRef.current?.cleanup();
     sessionRef.current = null;
     currentStageRef.current = "part1";
     setLesson(null);
     setTranscript([]);
+    transcriptRef.current = [];
     setFeedback(null);
     setImprovementDelta(null);
     setNoSpeechDetected(false);
@@ -618,6 +705,7 @@ export default function Home() {
               onStartHotSeat={handleStartSession}
               onEnterMirrorGym={() => setView("mirrorgym")}
               onWipeAllData={handleWipeAllData}
+              onOpenGrill={() => setIsGrillManuallyOpen(true)}
               masterPracticeCount={masterScript.totalPracticeCount}
               testHistory={testHistory}
               isLoading={isLoading}
@@ -721,6 +809,8 @@ export default function Home() {
                     key={currentStage}
                     lesson={lesson}
                     currentStage={currentStage}
+                    activeQuestionIdx={activeQuestionIdx}
+                    autoAdvanceNotice={autoAdvanceNotice}
                     onSpeakText={handleSpeakCoachText}
                     onStopSpeech={handleStopCoachText}
                     isCoachSpeaking={isCoachTtsSpeaking}
@@ -821,6 +911,22 @@ export default function Home() {
               </div>
             )}
           </div>
+        )}
+
+        {/* First-Time Interactive Candidate Grill Modal */}
+        {shouldShowGrill && (
+          <CandidateGrillModal
+            initialProfile={profile}
+            onCompleteGrill={(completedProfile) => {
+              saveProfile(completedProfile);
+              resetMasterScript(completedProfile);
+              setIsGrillManuallyOpen(false);
+            }}
+            onSkip={() => {
+              setIsGrillDismissed(true);
+              setIsGrillManuallyOpen(false);
+            }}
+          />
         )}
       </main>
     </div>
