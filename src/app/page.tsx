@@ -23,6 +23,14 @@ import {
   saveMasterScript,
   type MasterScriptRepository,
 } from "@/lib/master-script";
+import {
+  subscribeTestHistory,
+  getTestHistorySnapshot,
+  getTestHistoryServerSnapshot,
+  saveTestSession,
+  wipeAllUserData,
+  type DailyImprovementDelta,
+} from "@/lib/test-history";
 import { LIVE_MODEL } from "@/lib/models";
 import { examinerInstruction, STAGE_CUES } from "@/lib/prompts";
 import { LiveSession, type LiveStatus, type MicMode } from "@/lib/live-session";
@@ -41,11 +49,12 @@ import {
   Dumbbell,
   Clock,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 export default function Home() {
   const [view, setView] = useState<"setup" | "session" | "mirrorgym" | "upgrading" | "feedback">("setup");
-  const [band, setBand] = useState<TargetBand>("6.5");
+  const [band, setBand] = useState<TargetBand>("7.5");
   const [activeModel, setActiveModel] = useState<string>(LIVE_MODEL);
   const profile = useSyncExternalStore(
     subscribeProfile,
@@ -57,6 +66,11 @@ export default function Home() {
     getMasterScriptSnapshot,
     getMasterScriptServerSnapshot
   );
+  const testHistory = useSyncExternalStore(
+    subscribeTestHistory,
+    getTestHistorySnapshot,
+    getTestHistoryServerSnapshot
+  );
 
   // Lesson generation
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -67,15 +81,15 @@ export default function Home() {
   const sessionRef = useRef<LiveSession | null>(null);
   const speechEngineRef = useRef<SpeechEngine | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("idle");
-  const [currentStage, setCurrentStage] = useState<Stage>("motor_warmup");
-  const currentStageRef = useRef<Stage>("motor_warmup");
+  const [currentStage, setCurrentStage] = useState<Stage>("part1");
+  const currentStageRef = useRef<Stage>("part1");
   const [isMuted, setIsMuted] = useState(false);
   const [micMode, setMicMode] = useState<MicMode>("continuous");
   const [micVolume, setMicVolume] = useState(0);
   const [tutorSpeaking, setTutorSpeaking] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
 
-  // Teleprompter words count for student in long reading
+  // Words count for student in long reading / Cue Card
   const [studentWordCount, setStudentWordCount] = useState(0);
   const [isCoachTtsSpeaking, setIsCoachTtsSpeaking] = useState(false);
 
@@ -89,13 +103,25 @@ export default function Home() {
   const [micAnalyser, setMicAnalyser] = useState<AnalyserNode | null>(null);
   const [tutorAnalyser, setTutorAnalyser] = useState<AnalyserNode | null>(null);
 
-  // Feedback
+  // Feedback & Daily Improvement Delta
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [improvementDelta, setImprovementDelta] = useState<DailyImprovementDelta | null>(null);
   const [noSpeechDetected, setNoSpeechDetected] = useState(false);
   const [telemetry, setTelemetry] = useState<NetworkTelemetry | null>(null);
   const [isGrading, setIsGrading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [speechProtection, setSpeechProtection] = useState<"protected" | "barge-in">("protected");
+
+  // One-time auto reset on client if previous legacy methodology is detected
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const version = window.localStorage.getItem("vocal_lab_app_version");
+      if (version !== "v3_authentic_hotseat") {
+        wipeAllUserData();
+        window.localStorage.setItem("vocal_lab_app_version", "v3_authentic_hotseat");
+      }
+    }
+  }, []);
 
   // Initialize SpeechEngine on client with teardown guard
   useEffect(() => {
@@ -148,8 +174,8 @@ export default function Home() {
     setActiveModel(selectedLive);
 
     try {
-      // Step 1: Generate dynamic vocal workout curriculum
-      setLoadingStep("Curating personalized Vocal Priming & Story Shadowing drills...");
+      // Step 1: Generate authentic Cambridge Hot Seat test
+      setLoadingStep("Loading Cambridge IELTS Official Hot Seat Test...");
       const lessonRes = await fetch("/api/lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -157,13 +183,13 @@ export default function Home() {
       });
       if (!lessonRes.ok) {
         const err = await lessonRes.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to generate vocal routine");
+        throw new Error(err.error || "Failed to generate Cambridge test");
       }
       const { lesson: generatedLesson } = (await lessonRes.json()) as { lesson: Lesson };
       setLesson(generatedLesson);
 
       // Step 2: Request single-use ephemeral token
-      setLoadingStep("Authorizing ultra-fast Live Coach session...");
+      setLoadingStep("Authorizing Cambridge Examiner audio session...");
       const tokenRes = await fetch("/api/token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -176,10 +202,10 @@ export default function Home() {
       const { token, model, voice } = await tokenRes.json();
 
       // Step 3: Instantiate LiveSession
-      setLoadingStep("Starting audio graph & microphone worklet...");
+      setLoadingStep("Connecting live British RP Examiner...");
       setTranscript([]);
-      currentStageRef.current = "motor_warmup";
-      setCurrentStage("motor_warmup");
+      currentStageRef.current = "part1";
+      setCurrentStage("part1");
       setSessionSeconds(0);
       setStudentWordCount(0);
       setActiveRightTab("lesson");
@@ -207,7 +233,7 @@ export default function Home() {
               ];
             }
 
-            // Calculate running student words for the active stage (especially long_reading teleprompter)
+            // Running word count for candidate in active stage
             if (role === "student") {
               const activeStageStudentWords = nextEntries
                 .filter((t) => t.role === "student" && t.stage === activeStage)
@@ -247,8 +273,8 @@ export default function Home() {
       setMicAnalyser(live.micAnalyser);
       setTutorAnalyser(live.tutorAnalyser);
 
-      // Trigger initial motor drill greeting
-      live.sendText(STAGE_CUES.motor_warmup);
+      // Trigger initial Part 1 greeting
+      live.sendText(STAGE_CUES.part1);
 
       setView("session");
     } catch (err) {
@@ -302,7 +328,6 @@ export default function Home() {
   };
 
   const handleSpeakCoachText = (text: string, rate: number = 1.0) => {
-    // If live tutor was speaking, interrupt it
     sessionRef.current?.interruptTutor();
     speechEngineRef.current?.speak(text, { rate });
   };
@@ -343,12 +368,13 @@ export default function Home() {
     if (totalStudentWords === 0) {
       setView("feedback");
       setFeedback(null);
+      setImprovementDelta(null);
       setNoSpeechDetected(true);
       setIsGrading(false);
       return;
     }
 
-    // Candidate spoke! Enter upgrade pipeline
+    // Candidate spoke! Enter upgrade & evaluation pipeline
     setView("upgrading");
     setNoSpeechDetected(false);
     setIsGrading(true);
@@ -387,9 +413,38 @@ export default function Home() {
       if (feedbackResult.status === "fulfilled" && feedbackResult.value) {
         if (feedbackResult.value.noSpeech) {
           setFeedback(null);
+          setImprovementDelta(null);
           setNoSpeechDetected(true);
         } else {
-          setFeedback(feedbackResult.value.feedback);
+          const feedbackData: Feedback = feedbackResult.value.feedback;
+          setFeedback(feedbackData);
+
+          // Calculate cadence and save session to history
+          const calculatedWpm =
+            sessionSeconds > 5 && totalStudentWords > 0
+              ? Math.round(totalStudentWords / (sessionSeconds / 60))
+              : 125;
+
+          const savedRecord = saveTestSession({
+            timestamp: Date.now(),
+            targetBand: band,
+            overallBand: feedbackData.overall,
+            subScores: {
+              pronunciation: feedbackData.pronunciation.band,
+              fluency: feedbackData.fluency.band,
+              lexical: feedbackData.lexical.band,
+              grammar: feedbackData.grammar.band,
+            },
+            metrics: {
+              wpm: calculatedWpm,
+              totalStudentWords,
+              durationSeconds: sessionSeconds,
+              turnCount: studentEntries.length,
+            },
+            cambridgeTopic: lesson.topic,
+          });
+
+          setImprovementDelta(savedRecord.improvementDelta || null);
         }
       }
 
@@ -419,16 +474,24 @@ export default function Home() {
     sessionRef.current?.stop();
     speechEngineRef.current?.cleanup();
     sessionRef.current = null;
-    currentStageRef.current = "motor_warmup";
+    currentStageRef.current = "part1";
     setLesson(null);
     setTranscript([]);
     setFeedback(null);
+    setImprovementDelta(null);
     setNoSpeechDetected(false);
     setLiveStatus("idle");
-    setCurrentStage("motor_warmup");
+    setCurrentStage("part1");
     setSessionSeconds(0);
     setStudentWordCount(0);
     setView("setup");
+  };
+
+  const handleWipeAllData = () => {
+    wipeAllUserData();
+    setFeedback(null);
+    setImprovementDelta(null);
+    handleRestart();
   };
 
   const currentStageIndex = STAGES.findIndex((s) => s.id === currentStage);
@@ -441,12 +504,12 @@ export default function Home() {
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
             <span className="font-serif font-bold text-sm sm:text-base tracking-tight text-zinc-900 dark:text-zinc-100">
-              PHONETICS LAB
+              CAMBRIDGE HOT SEAT
             </span>
             <span className="text-[10px] text-zinc-400 hidden sm:inline">[ IELTS-ACADEMIC ]</span>
           </div>
 
-          {/* Protocol Stepper in Header */}
+          {/* Stepper in Header for Live Session */}
           {view === "session" && (
             <div className="flex items-center gap-1.5 text-[10px] uppercase">
               {STAGES.map((s, idx) => {
@@ -479,8 +542,20 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right header telemetry controls */}
+        {/* Right header controls */}
         <div className="flex items-center gap-2">
+          {view === "setup" && (
+            <button
+              type="button"
+              onClick={handleWipeAllData}
+              className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-mono border border-rose-300 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+              title="Erase all local storage data and start over"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>[ ERASE DATA & START OVER ]</span>
+            </button>
+          )}
+
           {view === "session" && (
             <>
               <div className="flex items-center gap-1 px-2 py-1 border border-zinc-200 dark:border-zinc-800 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
@@ -518,7 +593,7 @@ export default function Home() {
               className="flex items-center gap-1.5 px-3.5 py-1 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs uppercase font-bold transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>NEW PROTOCOL</span>
+              <span>NEW HOT SEAT</span>
             </button>
           )}
         </div>
@@ -536,14 +611,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* View 1: Minimalist Setup */}
+        {/* View 1: Authentic Setup */}
         {view === "setup" && (
           <div className="h-full w-full overflow-y-auto flex flex-col items-center justify-start sm:justify-center p-2 sm:p-4">
             <SetupCard
               onStartHotSeat={handleStartSession}
               onEnterMirrorGym={() => setView("mirrorgym")}
-              hasMasterScript={masterScript.totalPracticeCount > 0 || masterScript.items.length > 0}
+              onWipeAllData={handleWipeAllData}
               masterPracticeCount={masterScript.totalPracticeCount}
+              testHistory={testHistory}
               isLoading={isLoading}
               loadingStep={loadingStep}
               profile={profile}
@@ -592,15 +668,15 @@ export default function Home() {
                 >
                   <span>
                     {isLastStage
-                      ? "[ GENERATE DIAGNOSTIC REPORT ]"
-                      : `[ ADVANCE TO ${STAGES[currentStageIndex + 1]?.label.toUpperCase() || "NEXT PROTOCOL"} → ]`}
+                      ? "[ GENERATE OFFICIAL DIAGNOSTIC REPORT ]"
+                      : `[ ADVANCE TO ${STAGES[currentStageIndex + 1]?.label.toUpperCase() || "NEXT PART"} → ]`}
                   </span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {/* Right Display (Academic Journal Material & Transcript) - 7 Columns */}
+            {/* Right Display (Cambridge Task Material & Transcript) - 7 Columns */}
             <div className="lg:col-span-7 min-h-[500px] lg:h-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-5 flex flex-col overflow-hidden shadow-xs">
               <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0 font-mono text-xs">
                 <div className="flex items-center gap-1">
@@ -613,7 +689,7 @@ export default function Home() {
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
                   >
-                    LABORATORY MATERIAL
+                    EXAM MATERIALS
                   </button>
                   <button
                     type="button"
@@ -634,14 +710,15 @@ export default function Home() {
                 </div>
 
                 <div className="text-[10px] uppercase text-zinc-500 hidden sm:block">
-                  {STAGES[currentStageIndex].label}
+                  {STAGES[currentStageIndex]?.label}
                 </div>
               </div>
 
-              {/* Scrollable Container (internal only) */}
+              {/* Scrollable Container */}
               <div className="flex-1 overflow-hidden">
                 {activeRightTab === "lesson" ? (
                   <LessonCard
+                    key={currentStage}
                     lesson={lesson}
                     currentStage={currentStage}
                     onSpeakText={handleSpeakCoachText}
@@ -662,7 +739,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* View 3: Master Script Upgrade Pipeline (Post-Hot Seat) */}
+        {/* View 3: Master Script Upgrade Pipeline */}
         {view === "upgrading" && (
           <div className="h-full w-full flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto font-mono space-y-5 animate-in fade-in">
             <div className="w-14 h-14 border-2 border-zinc-900 dark:border-zinc-100 flex items-center justify-center text-zinc-900 dark:text-zinc-100 animate-pulse">
@@ -670,27 +747,27 @@ export default function Home() {
             </div>
             <div className="space-y-2">
               <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
-                [ HOT SEAT TAKE 1 COMPLETE • UPGRADE PIPELINE ]
+                [ AUTHENTIC HOT SEAT COMPLETE • UPGRADE PIPELINE ]
               </div>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-zinc-900 dark:text-zinc-100">
-                Synthesizing Your Band 8.5 Master Script
+                Evaluating Spoken Turns & Elevating Master Script
               </h2>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed max-w-sm mx-auto">
-                Elevating your authentic spoken answers into native cleft sentences, rhythmic breath units, and Cambridge collocations.
+                Comparing today&apos;s interview with your previous sessions, calculating fluency delta, and structuring your personal Band 8.5 Master Script...
               </p>
             </div>
 
             <div className="w-full p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-left space-y-2 text-[11px]">
               <div className="flex items-center justify-between text-[10px] text-zinc-500 uppercase font-mono">
-                <span>ACOUSTIC TRANSFORMATION:</span>
+                <span>EVALUATION & TRANSFORMATION PIPELINE:</span>
                 <span className="animate-spin text-amber-500">◒</span>
               </div>
               <ul className="space-y-1 text-zinc-600 dark:text-zinc-400 font-mono">
-                <li>✓ Preserving 100% authentic personal facts & opinions</li>
-                <li>✓ Structuring cleft sentences & fronted adverbials</li>
-                <li>✓ Injecting natural IELTS collocations (100% Rule)</li>
-                <li>✓ Marking breath pause units (|) & tonic stresses</li>
-                <li>✓ Persisting into Local Vault for repetitive mirroring</li>
+                <li>✓ Objectively grading recorded speech against IELTS descriptors</li>
+                <li>✓ Calculating day-over-day cadence WPM and fluency improvements</li>
+                <li>✓ Preserving your authentic personal facts & opinions</li>
+                <li>✓ Structuring Band 8.5 cleft sentences & concessive clauses</li>
+                <li>✓ Locking upgraded answers into Master Vault for daily repetition</li>
               </ul>
             </div>
           </div>
@@ -714,7 +791,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* View 5: Diagnostic Feedback */}
+        {/* View 5: Diagnostic Feedback & Daily Progress */}
         {view === "feedback" && (
           <div className="h-full w-full overflow-y-auto p-2 scrollbar-thin">
             {isGrading ? (
@@ -723,7 +800,7 @@ export default function Home() {
                   <Dumbbell className="w-6 h-6" />
                 </div>
                 <h3 className="text-base font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
-                  COMPUTING PHONETIC DIAGNOSTICS...
+                  COMPUTING PHONETIC DIAGNOSTICS & DELTA...
                 </h3>
                 <p className="text-xs text-zinc-500 font-sans max-w-xs mx-auto leading-relaxed">
                   Evaluating motor articulation, jaw tension, cadence WPM, and IELTS communicative descriptors.
@@ -732,6 +809,8 @@ export default function Home() {
             ) : feedback || noSpeechDetected ? (
               <FeedbackReport
                 feedback={feedback}
+                improvementDelta={improvementDelta || undefined}
+                dayNumber={testHistory.length}
                 noSpeechDetected={noSpeechDetected}
                 onRestart={handleRestart}
                 onEnterMirrorGym={() => setView("mirrorgym")}

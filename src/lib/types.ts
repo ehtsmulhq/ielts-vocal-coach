@@ -1,18 +1,35 @@
 export type TargetBand = "5.5" | "6.5" | "7.5";
 
-export type Stage = "motor_warmup" | "long_reading" | "speed_drill" | "ielts_test";
+export type Stage = "part1" | "part2" | "part3";
 
 export const STAGES: {
   id: Stage;
   label: string;
   hint: string;
-  category: "vocal" | "exam";
+  category: "exam";
   badge: string;
 }[] = [
-  { id: "motor_warmup", label: "Opener Priming", hint: "Formulaic Chunk Reflexes", category: "vocal", badge: "Stage 1" },
-  { id: "long_reading", label: "Story Shadowing", hint: "Tarteel Teleprompter & WPM", category: "vocal", badge: "Stage 2 • Core" },
-  { id: "speed_drill", label: "Reflex Sprint", hint: "1.5s Zero-Hesitation Starter", category: "vocal", badge: "Stage 3" },
-  { id: "ielts_test", label: "Exam Capstone", hint: "Full IELTS Speaking Simulation", category: "exam", badge: "Stage 4" },
+  {
+    id: "part1",
+    label: "Part 1: Identity & Everyday Life",
+    hint: "Authentic Interview (Work, Roots, Habits)",
+    category: "exam",
+    badge: "Part 1 • 4-5 min",
+  },
+  {
+    id: "part2",
+    label: "Part 2: Individual Long Turn",
+    hint: "Official Cue Card Monologue (1-2 min)",
+    category: "exam",
+    badge: "Part 2 • 3-4 min",
+  },
+  {
+    id: "part3",
+    label: "Part 3: Two-Way Discussion",
+    hint: "Deep Analytical & Abstract Exchange",
+    category: "exam",
+    badge: "Part 3 • 4-5 min",
+  },
 ];
 
 export interface CandidateProfile {
@@ -51,67 +68,35 @@ export const DEFAULT_PROFILE: CandidateProfile = {
   lastUpdated: Date.now(),
 };
 
-export interface MotorDrill {
-  soundSymbol?: string;
-  soundName?: string;
-  physicalTip?: string;
-  practiceWords?: string[];
-  challengeSentence?: string;
-  // V2 Chunk Extensions
-  chunkPhrase: string;
-  category: "career" | "hometown" | "habit" | "general";
-  phoneticFocus: string;
-  usageContext: string;
-  sampleSentence: string;
-}
-
-export interface LongReadingPassage {
+export interface CueCard {
   title: string;
-  theme: string;
-  wordCount: number;
-  fullText: string;
-  targetWpmRange: string; // e.g. "120 - 140 WPM"
-  thoughtChunks: string[];
-  keyDifficultWords: { word: string; phonetic: string; tip: string }[];
-  storyContext?: string;
+  bullets: string[];
+  closing: string;
 }
 
-export interface SpeedDrill {
-  title: string;
-  targetSound?: string;
-  twister?: string;
-  goalPace?: string;
-  // V2 Reflex Sprint Extensions
-  questionPrompt: string;
-  aerScaffolding: {
-    anchor: string;
-    reason: string;
-    detail: string;
-  };
-  starterChunk: string;
+export interface RecommendedCollocation {
+  phrase: string;
+  meaning: string;
+  example: string;
+  phoneticTip?: string;
 }
 
-export interface IeltsExam {
+export interface CambridgeHotSeatTest {
   theme: string;
   cambridgeRef?: string;
   part1Questions: string[];
-  part2CueCard: {
-    title: string;
-    bullets: string[];
-    closing: string;
-  };
+  part2CueCard: CueCard;
   part3Questions: string[];
-  recommendedVocabulary?: { phrase: string; meaning: string; example: string }[];
+  recommendedVocabulary: RecommendedCollocation[];
+  bandFocusNotes?: string;
 }
 
 export interface Lesson {
   topic: string;
-  vocalWorkout: {
-    motorDrills: MotorDrill[];
-    longReading: LongReadingPassage;
-    speedDrills: SpeedDrill[];
-  };
-  ieltsExam: IeltsExam;
+  band: TargetBand;
+  hotSeatTest: CambridgeHotSeatTest;
+  // Deprecated alias for backwards-compatibility
+  ieltsExam?: CambridgeHotSeatTest;
 }
 
 export interface LessonRequest {

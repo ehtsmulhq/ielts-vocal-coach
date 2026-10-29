@@ -1,10 +1,22 @@
 "use client";
 
 import type { Feedback } from "@/lib/types";
-import { RotateCcw, Activity, MicOff, Terminal, Sparkles } from "lucide-react";
+import type { DailyImprovementDelta } from "@/lib/test-history";
+import {
+  RotateCcw,
+  Activity,
+  MicOff,
+  Terminal,
+  Sparkles,
+  TrendingUp,
+  CheckCircle2,
+  Flame,
+} from "lucide-react";
 
 interface FeedbackReportProps {
   feedback: Feedback | null;
+  improvementDelta?: DailyImprovementDelta;
+  dayNumber?: number;
   noSpeechDetected?: boolean;
   onRestart: () => void;
   onEnterMirrorGym?: () => void;
@@ -12,6 +24,8 @@ interface FeedbackReportProps {
 
 export function FeedbackReport({
   feedback,
+  improvementDelta,
+  dayNumber,
   noSpeechDetected,
   onRestart,
   onEnterMirrorGym,
@@ -29,7 +43,7 @@ export function FeedbackReport({
               No Spoken Audio Recorded
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-md mx-auto">
-              No candidate speech or sight-reading utterance was detected during this session.
+              No candidate speech was captured during this Cambridge Hot Seat interview session.
             </p>
           </div>
 
@@ -38,7 +52,7 @@ export function FeedbackReport({
               SYSTEM DIAGNOSIS & TROUBLESHOOTING:
             </span>
             <ul className="space-y-1 text-zinc-600 dark:text-zinc-400 text-[11px]">
-              <li>• Ensure microphone permission is granted in the browser header.</li>
+              <li>• Ensure microphone permission is granted in the browser.</li>
               <li>• In Push-to-Talk mode, hold [ SPACEBAR ] while speaking.</li>
               <li>• Verify input audio levels register on the Oscilloscope monitor.</li>
             </ul>
@@ -61,7 +75,7 @@ export function FeedbackReport({
               className="w-full sm:w-auto py-3 px-4 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-300 dark:border-zinc-700"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>[ RE-INITIALIZE WORKOUT PROTOCOL ]</span>
+              <span>[ START NEW HOT SEAT ]</span>
             </button>
           </div>
         </div>
@@ -83,9 +97,11 @@ export function FeedbackReport({
         <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-zinc-400 pb-2 border-b border-zinc-800">
           <span className="flex items-center gap-1.5 font-bold">
             <Terminal className="w-3.5 h-3.5 text-zinc-400" />
-            OFFICIAL DIAGNOSTIC EVALUATION REPORT
+            CAMBRIDGE IELTS HOT SEAT DIAGNOSTIC EVALUATION
           </span>
-          <span>REF: IELTS-BAND-DESCRIPTORS</span>
+          <span className="bg-zinc-800 px-2 py-0.5 border border-zinc-700 text-zinc-300">
+            {dayNumber ? `DAY ${dayNumber} HOT SEAT` : "AUTHENTIC TEST"}
+          </span>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pt-2">
@@ -94,7 +110,7 @@ export function FeedbackReport({
               Communicative Band Evaluation
             </h2>
             <p className="text-xs text-zinc-400 font-sans mt-0.5">
-              Diagnostic assessment of speech motor articulation, cadence, and fluency.
+              Diagnostic assessment of speech cadence, syntax maturity, and lexical precision.
             </p>
           </div>
 
@@ -107,12 +123,57 @@ export function FeedbackReport({
         </div>
       </div>
 
-      {/* Vocal Habits & Biomechanics Cards */}
+      {/* ============================================================== */}
+      {/* DAY-OVER-DAY IMPROVEMENT DELTA & CONCRETE WINS */}
+      {/* ============================================================== */}
+      {improvementDelta && (
+        <div className="p-5 border-2 border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-950 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold tracking-wider text-zinc-900 dark:text-zinc-100 pb-2 border-b border-zinc-200 dark:border-zinc-800">
+            <span className="flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              MEASURABLE DAILY IMPROVEMENTS & MILESTONES
+            </span>
+            <span className="text-zinc-500">
+              {improvementDelta.overallDelta > 0
+                ? `+${improvementDelta.overallDelta} OVERALL BAND GAIN`
+                : "PROGRESS HIGHLIGHTS"}
+            </span>
+          </div>
+
+          {/* Key Concrete Wins */}
+          <div className="space-y-1.5">
+            {improvementDelta.keyWins.map((win, idx) => (
+              <div key={idx} className="flex items-start gap-2 text-xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                <span className="font-serif text-zinc-800 dark:text-zinc-200 font-medium">
+                  {win}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Tomorrow's Deliberate Focus */}
+          {improvementDelta.focusAreasForTomorrow && improvementDelta.focusAreasForTomorrow.length > 0 && (
+            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-900">
+              <span className="font-mono text-[10px] uppercase font-bold text-zinc-500 block mb-1">
+                DELIBERATE TARGET FOR TOMORROW:
+              </span>
+              <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400 font-sans">
+                {improvementDelta.focusAreasForTomorrow.map((target, idx) => (
+                  <li key={idx}>→ {target}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Vocal Habits & Articulation Observations */}
       {feedback.vocalHabits && (
         <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
           <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 font-bold flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-zinc-500" />
-            VOCAL BIOMECHANICS & MOTOR OBSERVATIONS
+            VOCAL BIOMECHANICS & CADENCE OBSERVATIONS
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-serif">
             <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
@@ -148,53 +209,22 @@ export function FeedbackReport({
         {criteria.map((item, idx) => (
           <div
             key={idx}
-            className="p-4 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2"
+            className="p-4 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-1.5"
           >
-            <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-              <span className="font-bold">{item.label}</span>
-              <span className="font-mono font-bold text-xs text-zinc-900 dark:text-zinc-100">
+            <div className="flex items-center justify-between font-mono text-[10px] uppercase">
+              <span className="text-zinc-500 font-bold">{item.label}</span>
+              <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100">
                 BAND {item.data.band.toFixed(1)}
               </span>
             </div>
-            <p className="font-serif text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
               {item.data.comment}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Strengths & Improvements */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
-            [ DEMONSTRATED STRENGTHS ]
-          </div>
-          <ul className="space-y-1.5 font-serif text-xs text-zinc-800 dark:text-zinc-200">
-            {feedback.strengths.map((str, idx) => (
-              <li key={idx} className="flex items-start gap-1.5">
-                <span className="font-mono text-zinc-400">•</span>
-                <span>{str}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
-            [ ARTICULATORY PRIORITIES ]
-          </div>
-          <ul className="space-y-1.5 font-serif text-xs text-zinc-800 dark:text-zinc-200">
-            {feedback.improvements.map((imp, idx) => (
-              <li key={idx} className="flex items-start gap-1.5">
-                <span className="font-mono text-zinc-400">•</span>
-                <span>{imp}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* Practice Words */}
+      {/* Recommended Phonetic Repetition Words */}
       {feedback.wordsToPractice && feedback.wordsToPractice.length > 0 && (
         <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
           <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
@@ -218,35 +248,25 @@ export function FeedbackReport({
         </div>
       )}
 
-      {/* Next Drill Prescription */}
-      <div className="p-4 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 space-y-1">
-        <div className="font-mono text-[10px] uppercase font-bold tracking-wider opacity-80">
-          RECOMMENDED 5-MINUTE DAILY VOCAL PRESCRIPTION
-        </div>
-        <p className="font-serif text-sm leading-relaxed">
-          {feedback.nextDrill}
-        </p>
-      </div>
-
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
         {onEnterMirrorGym && (
           <button
             type="button"
             onClick={onEnterMirrorGym}
-            className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100 flex items-center justify-center gap-2 shadow-sm"
+            className="w-full sm:w-auto px-6 py-4 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100 flex items-center justify-center gap-2 shadow-sm"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>[ ENTER MASTER MIRROR GYM (START DAILY REPETITION) → ]</span>
+            <Flame className="w-4 h-4 text-amber-500" />
+            <span>[ ENTER MASTER MIRROR GYM (DRILL TODAY&apos;S UPGRADED SCRIPT) → ]</span>
           </button>
         )}
         <button
           type="button"
           onClick={onRestart}
-          className="w-full sm:w-auto px-6 py-3.5 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-300 dark:border-zinc-700 flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-6 py-4 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-300 dark:border-zinc-700 flex items-center justify-center gap-2"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>[ NEW PROTOCOL ]</span>
+          <span>[ TAKE ANOTHER TEST ]</span>
         </button>
       </div>
     </div>

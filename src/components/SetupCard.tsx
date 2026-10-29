@@ -4,24 +4,24 @@ import { useState } from "react";
 import type { CandidateProfile, TargetBand } from "@/lib/types";
 import { LIVE_MODELS, LIVE_VOICES } from "@/lib/models";
 import { CURATED_THEMES } from "@/lib/prompts";
-import { resetProfile } from "@/lib/profile";
 import { CAMBRIDGE_TEST_MODULES } from "@/lib/cambridge-materials";
+import type { HotSeatSessionRecord } from "@/lib/test-history";
 import {
   ArrowRight,
   Loader2,
   Shuffle,
-  Activity,
   Sliders,
   Cpu,
   Mic,
   User,
   Edit3,
   X,
-  Check,
-  RotateCcw,
   Sparkles,
   BookOpen,
   Flame,
+  Trash2,
+  Calendar,
+  Award,
 } from "lucide-react";
 
 interface SetupCardProps {
@@ -34,8 +34,9 @@ interface SetupCardProps {
     cambridgeTestId?: string
   ) => Promise<void>;
   onEnterMirrorGym: () => void;
-  hasMasterScript: boolean;
+  onWipeAllData: () => void;
   masterPracticeCount: number;
+  testHistory: HotSeatSessionRecord[];
   isLoading: boolean;
   loadingStep: string;
   profile: CandidateProfile;
@@ -45,23 +46,25 @@ interface SetupCardProps {
 export function SetupCard({
   onStartHotSeat,
   onEnterMirrorGym,
-  hasMasterScript,
+  onWipeAllData,
   masterPracticeCount,
+  testHistory,
   isLoading,
   loadingStep,
   profile,
   onProfileChange,
 }: SetupCardProps) {
-  const [band, setBand] = useState<TargetBand>(profile.targetBand || "6.5");
-  const [focusArea, setFocusArea] = useState<
-    "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed"
-  >("full");
+  const [band, setBand] = useState<TargetBand>(profile.targetBand || "7.5");
   const [selectedModel, setSelectedModel] = useState(LIVE_MODELS[0].id);
   const [selectedVoice, setSelectedVoice] = useState(LIVE_VOICES[0].id);
   const [customTopic, setCustomTopic] = useState("");
-  const [selectedCambridgeId, setSelectedCambridgeId] = useState<string>("");
+  const [selectedCambridgeId, setSelectedCambridgeId] = useState<string>("cam-19-test-1");
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [draftProfile, setDraftProfile] = useState<CandidateProfile>({ ...profile });
+
+  const currentDay = testHistory.length + 1;
+  const lastSession = testHistory.length > 0 ? testHistory[testHistory.length - 1] : null;
 
   const handleRandomizeTopic = () => {
     const next = CURATED_THEMES[Math.floor(Math.random() * CURATED_THEMES.length)];
@@ -81,43 +84,6 @@ export function SetupCard({
     }
   };
 
-  const focusModes: {
-    id: "full" | "career" | "hometown" | "habits";
-    code: string;
-    title: string;
-    desc: string;
-    badge: string;
-  }[] = [
-    {
-      id: "full",
-      code: "PROTOCOL 01",
-      title: "Comprehensive Mastery",
-      desc: "Work, Hometown, Living, Daily Habits & Part 2 Cue Card Monologue",
-      badge: "Full Protocol",
-    },
-    {
-      id: "career",
-      code: "PROTOCOL 02",
-      title: "Work & Career Reflexes",
-      desc: `Specialized drills on ${profile.occupationOrMajor}, daily duties, and technical problem-solving`,
-      badge: "Career & Tech",
-    },
-    {
-      id: "hometown",
-      code: "PROTOCOL 03",
-      title: "Hometown Roots & Living Space",
-      desc: `Rapid reflexes describing ${profile.hometownName}, residential layout, and neighborhood atmosphere`,
-      badge: "Roots & Space",
-    },
-    {
-      id: "habits",
-      code: "PROTOCOL 04",
-      title: "Daily Habits & Energy Rhythms",
-      desc: "Morning routines, deep focus practices, and evening unwinding rituals",
-      badge: "Habit Reflexes",
-    },
-  ];
-
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     onProfileChange(draftProfile);
@@ -127,13 +93,11 @@ export function SetupCard({
     setIsProfileModalOpen(false);
   };
 
-  const handleResetProfile = () => {
-    const fresh = resetProfile();
-    setDraftProfile(fresh);
-    onProfileChange(fresh);
-    if (fresh.targetBand) {
-      setBand(fresh.targetBand);
-    }
+  const handleConfirmWipe = () => {
+    onWipeAllData();
+    setIsResetConfirmOpen(false);
+    setCustomTopic("");
+    setSelectedCambridgeId("cam-19-test-1");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -143,7 +107,7 @@ export function SetupCard({
       band,
       customTopic.trim() || undefined,
       selectedModel,
-      focusArea,
+      "full",
       selectedVoice,
       selectedCambridgeId || undefined
     );
@@ -154,44 +118,56 @@ export function SetupCard({
       {/* Editorial Header */}
       <div className="space-y-2 border-b border-zinc-200 dark:border-zinc-800 pb-5">
         <div className="flex items-center justify-between text-[10px] font-mono tracking-widest text-zinc-500 uppercase">
-          <span>[ VOCAL LABORATORY CONFIGURATION ]</span>
-          <span>REF: ACOUSTIC-APPRENTICESHIP-V5</span>
+          <span className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100">
+            <Award className="w-3.5 h-3.5 text-zinc-500" />
+            AUTHENTIC CAMBRIDGE IELTS HOT SEAT
+          </span>
+          <span className="bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 border border-zinc-200 dark:border-zinc-800 font-bold">
+            {testHistory.length === 0 ? "DAY 1 • BASELINE TEST" : `DAY ${currentDay} • PROGRESS TRACKER`}
+          </span>
         </div>
+
         <h1 className="text-2xl sm:text-3xl font-serif tracking-tight text-zinc-900 dark:text-zinc-50">
-          English Phonetics & Vocal Laboratory
+          Daily Authentic Speaking Hot Seat
         </h1>
         <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
-          Master Script Vault, Native Exemplar Mirroring & High-Repetition Vocal Muscle Memory.
+          Take the unscripted 3-part Cambridge test daily. Point out measurable improvements in fluency, grammar, and vocabulary across every session.
         </p>
 
-        {/* Master Script Vault Hero Card */}
-        <div className="pt-2">
-          <div className="p-4 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-            <div className="space-y-0.5">
-              <div className="font-mono text-[10px] uppercase font-bold tracking-wider flex items-center gap-1.5 opacity-80">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>MASTER SCRIPT VAULT (NO RANDOM REPETITION)</span>
+        {/* Previous Session Improvement Snapshot (If tests have been taken) */}
+        {lastSession && (
+          <div className="pt-2">
+            <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono text-xs">
+              <div className="space-y-0.5">
+                <div className="text-[10px] uppercase font-bold text-zinc-500 flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3 text-zinc-400" />
+                  <span>LAST SESSION (DAY {lastSession.dayNumber} • {lastSession.dateStr})</span>
+                </div>
+                <p className="font-serif font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                  Overall Band: {lastSession.overallBand.toFixed(1)} / 9.0 • {lastSession.metrics.wpm} WPM
+                </p>
+                <div className="text-[11px] text-zinc-500 font-sans flex items-center gap-2">
+                  <span>Fluency: {lastSession.subScores.fluency.toFixed(1)}</span>
+                  <span>•</span>
+                  <span>Grammar: {lastSession.subScores.grammar.toFixed(1)}</span>
+                  <span>•</span>
+                  <span>Lexical: {lastSession.subScores.lexical.toFixed(1)}</span>
+                </div>
               </div>
-              <p className="font-serif text-sm font-bold">
-                {hasMasterScript
-                  ? `Personal Band 8.5 Script Loaded • Practiced ${masterPracticeCount} Times`
-                  : "Canonical Profile Script Ready for Daily Mirroring"}
-              </p>
-              <p className="text-[11px] opacity-80 font-sans">
-                Repeat the exact same answers over and over until vocal muscle automaticity is locked.
-              </p>
-            </div>
 
-            <button
-              type="button"
-              onClick={onEnterMirrorGym}
-              className="px-4 py-2.5 bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 font-mono font-bold text-xs uppercase tracking-wider border border-white dark:border-zinc-900 cursor-pointer hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-1.5"
-            >
-              <Flame className="w-3.5 h-3.5 text-amber-500" />
-              <span>[ ENTER DAILY MIRROR GYM ]</span>
-            </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onEnterMirrorGym}
+                  className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 text-[11px] font-bold uppercase cursor-pointer hover:bg-zinc-100 transition-colors flex items-center gap-1"
+                >
+                  <Flame className="w-3 h-3 text-amber-500" />
+                  <span>MIRROR GYM ({masterPracticeCount} REPS)</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Candidate Profile Pill Banner */}
         <div className="pt-1 flex flex-wrap items-center justify-between gap-2 bg-zinc-50 dark:bg-zinc-900/60 p-3 border border-zinc-200 dark:border-zinc-800">
@@ -201,7 +177,7 @@ export function SetupCard({
             </div>
             <div className="text-xs">
               <span className="font-mono text-[10px] uppercase text-zinc-400 block leading-none">
-                CANDIDATE MEMORY
+                CANDIDATE IDENTITY
               </span>
               <span className="font-serif font-bold text-zinc-900 dark:text-zinc-100">
                 {profile.preferredName || profile.fullName}
@@ -212,182 +188,141 @@ export function SetupCard({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setDraftProfile({ ...profile });
-              setIsProfileModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono border border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-950 hover:bg-zinc-900 hover:text-white dark:hover:bg-zinc-100 dark:hover:text-zinc-900 transition-colors cursor-pointer"
-          >
-            <Edit3 className="w-3 h-3" />
-            <span>[ EDIT PROFILE MEMORY ]</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setDraftProfile({ ...profile });
+                setIsProfileModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <Edit3 className="w-3 h-3" />
+              <span>[ EDIT PROFILE ]</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsResetConfirmOpen(true)}
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono border border-rose-300 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors cursor-pointer"
+              title="Wipe all local data and start fresh"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>RESET ALL</span>
+            </button>
+          </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Workout Focus Selector */}
+        {/* Step 1: Cambridge Official Test Bank */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+            <span className="flex items-center gap-1.5 font-bold">
+              <BookOpen className="w-3.5 h-3.5 text-zinc-500" />
+              I. Official Cambridge Speaking Test (Books 16–19)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {CAMBRIDGE_TEST_MODULES.slice(0, 4).map((mod) => {
+              const isSelected = selectedCambridgeId === mod.id;
+              return (
+                <button
+                  key={mod.id}
+                  type="button"
+                  onClick={() => handleSelectCambridgeTest(mod.id)}
+                  className={`p-3 border text-left transition-all cursor-pointer ${
+                    isSelected
+                      ? "border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-900 shadow-xs"
+                      : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-zinc-400"
+                  }`}
+                >
+                  <div className="flex items-center justify-between font-mono text-[9px] uppercase text-zinc-500 mb-0.5">
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      {mod.book} • TEST {mod.testNumber}
+                    </span>
+                    {isSelected && <span className="font-bold text-zinc-900 dark:text-zinc-100">[ SELECTED ]</span>}
+                  </div>
+                  <h4 className="font-serif font-bold text-xs text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-1">
+                    {mod.title}
+                  </h4>
+                  <p className="text-[10px] text-zinc-500 font-sans line-clamp-1 mt-0.5">
+                    {mod.theme}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Custom Topic Input */}
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="text"
+              value={customTopic}
+              onChange={(e) => {
+                setCustomTopic(e.target.value);
+                setSelectedCambridgeId("");
+              }}
+              placeholder="Or enter a custom Cambridge topic / theme..."
+              className="flex-1 font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
+            />
+            <button
+              type="button"
+              onClick={handleRandomizeTopic}
+              className="p-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+              title="Pick random Cambridge theme"
+            >
+              <Shuffle className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Step 2: Target Band Selector */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
             <span className="flex items-center gap-1.5 font-bold">
               <Sliders className="w-3.5 h-3.5 text-zinc-500" />
-              I. Select Pedagogical Protocol
+              II. Target IELTS Communicative Band
             </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {focusModes.map((mode) => {
-              const isSelected = focusArea === mode.id;
+
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: "5.5" as TargetBand, title: "Band 5.5", subtitle: "Zero Hesitation Flow" },
+              { id: "6.5" as TargetBand, title: "Band 6.5", subtitle: "Syntactic Coherence" },
+              { id: "7.5" as TargetBand, title: "Band 7.5 - 9.0", subtitle: "Effortless RP Articulation" },
+            ].map((b) => {
+              const isSelected = band === b.id;
               return (
                 <button
-                  key={mode.id}
+                  key={b.id}
                   type="button"
-                  onClick={() => setFocusArea(mode.id)}
-                  className={`flex flex-col p-3 text-left transition-all cursor-pointer border ${
+                  onClick={() => setBand(b.id)}
+                  className={`p-2.5 border text-center transition-all cursor-pointer ${
                     isSelected
-                      ? "border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-900"
-                      : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700 bg-white dark:bg-zinc-950"
+                      ? "border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-bold"
+                      : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">
-                      {mode.code}
-                    </span>
-                    <span
-                      className={`text-[9px] font-mono uppercase px-1.5 py-0.5 border ${
-                        isSelected
-                          ? "border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 font-bold"
-                          : "border-zinc-200 dark:border-zinc-800 text-zinc-500"
-                      }`}
-                    >
-                      {mode.badge}
-                    </span>
-                  </div>
-                  <span className="font-serif font-semibold text-xs text-zinc-900 dark:text-zinc-100 mb-0.5">
-                    {mode.title}
-                  </span>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug font-sans">
-                    {mode.desc}
-                  </p>
+                  <div className="font-serif text-sm font-bold">{b.title}</div>
+                  <div className="font-mono text-[9px] opacity-80 uppercase mt-0.5">{b.subtitle}</div>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Cambridge Official Practice Books Selector */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-            <span className="flex items-center gap-1.5 font-bold">
-              <BookOpen className="w-3.5 h-3.5 text-zinc-500" />
-              II. Official Cambridge IELTS Blueprint (Books 16–19)
-            </span>
-            <span className="text-[10px] text-zinc-400">Authentic Test Bank</span>
-          </div>
-
-          <select
-            value={selectedCambridgeId}
-            onChange={(e) => handleSelectCambridgeTest(e.target.value)}
-            className="w-full text-xs font-mono px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 cursor-pointer"
-          >
-            <option value="">[ Dynamic Profile Synthesis / Roll Random ]</option>
-            {CAMBRIDGE_TEST_MODULES.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.book} • Test {m.testNumber}: {m.title}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Reading & Drill Theme Selector */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-            <span className="flex items-center gap-1.5 font-bold">
-              <Activity className="w-3.5 h-3.5 text-zinc-500" />
-              III. Session Material Theme
-            </span>
-            <button
-              type="button"
-              onClick={handleRandomizeTopic}
-              className="text-[10px] font-mono text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Shuffle className="w-3 h-3" />
-              <span>[ ROLL RANDOM ]</span>
-            </button>
-          </div>
-
-          <input
-            type="text"
-            value={customTopic}
-            onChange={(e) => {
-              setCustomTopic(e.target.value);
-              setSelectedCambridgeId("");
-            }}
-            placeholder={`e.g. Cambridge 19: AI & Automation, ${profile.occupationOrMajor} Architecture, Morning Rhythms...`}
-            className="w-full text-xs font-mono px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors"
-          />
-        </div>
-
-        {/* Target Level */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-            <span className="font-bold">IV. Target Fluency Benchmark</span>
-            <span className="text-[10px] text-zinc-400">CEFR Benchmark</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2.5">
-            {[
-              { id: "5.5", label: "Band 5.5", sub: "Foundational B2" },
-              { id: "6.5", label: "Band 6.5", sub: "Competent C1" },
-              { id: "7.5", label: "Band 7.5+", sub: "Advanced C2" },
-            ].map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => setBand(b.id as TargetBand)}
-                className={`p-2.5 border text-center transition-all cursor-pointer ${
-                  band === b.id
-                    ? "border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-mono font-bold"
-                    : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-700"
-                }`}
-              >
-                <div className="text-xs font-bold font-mono">{b.label}</div>
-                <div className="text-[10px] opacity-80">{b.sub}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Voice Persona & Live Engine Selectors */}
+        {/* Step 3: British Examiner Audio Engine */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-          {/* Coach Voice Persona */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1 font-bold">
-              <Mic className="w-3 h-3 text-zinc-500" />
-              Acoustic Voice Model
-            </label>
-            <select
-              value={selectedVoice}
-              onChange={(e) => setSelectedVoice(e.target.value)}
-              className="w-full text-xs font-mono px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 cursor-pointer"
-            >
-              {LIVE_VOICES.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Live Engine Model */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1 font-bold">
-              <Cpu className="w-3 h-3 text-zinc-500" />
-              Live Telemetry Engine
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono uppercase font-bold text-zinc-500 flex items-center gap-1">
+              <Cpu className="w-3 h-3 text-zinc-400" /> Live Reasoning Model
             </label>
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full text-xs font-mono px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 cursor-pointer"
+              className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900"
             >
               {LIVE_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -396,35 +331,63 @@ export function SetupCard({
               ))}
             </select>
           </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono uppercase font-bold text-zinc-500 flex items-center gap-1">
+              <Mic className="w-3 h-3 text-zinc-400" /> Examiner Voice Timbre
+            </label>
+            <select
+              value={selectedVoice}
+              onChange={(e) => setSelectedVoice(e.target.value)}
+              className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900"
+            >
+              {LIVE_VOICES.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name} ({v.desc})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Start Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full py-3.5 px-5 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-900 dark:border-zinc-100 shadow-sm"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
-              <span>{loadingStep || "INITIALIZING AUTHENTIC HOT SEAT..."}</span>
-            </>
-          ) : (
-            <>
-              <span>[ RECORD AUTHENTIC HOT SEAT (TAKE 1 BASELINE) ]</span>
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
+        {/* Primary Action Button */}
+        <div className="space-y-2 pt-2">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-4 px-5 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-900 dark:border-zinc-100 shadow-sm"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
+                <span>{loadingStep || "COMMENCING AUTHENTIC HOT SEAT INTERVIEW..."}</span>
+              </>
+            ) : (
+              <>
+                <span>[ 🎙️ ENTER TODAY&apos;S AUTHENTIC HOT SEAT TEST ]</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+
+          {/* Secondary Action: Direct Mirror Gym */}
+          <button
+            type="button"
+            onClick={onEnterMirrorGym}
+            className="w-full py-2.5 px-4 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono text-xs uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-200 dark:border-zinc-800"
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-500" />
+            <span>[ 🔁 ENTER DAILY MIRROR GYM (DELIBERATE REPETITION) ]</span>
+          </button>
+        </div>
       </form>
 
       {/* ============================================================== */}
-      {/* CANDIDATE PROFILE MEMORY MODAL / DRAWER */}
+      {/* CANDIDATE PROFILE MEMORY MODAL */}
       {/* ============================================================== */}
       {isProfileModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in">
           <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 w-full max-w-xl max-h-[90vh] flex flex-col shadow-xl overflow-hidden font-sans">
-            {/* Modal Header */}
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between font-mono text-xs">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-zinc-500" />
@@ -435,17 +398,15 @@ export function SetupCard({
               <button
                 type="button"
                 onClick={() => setIsProfileModalOpen(false)}
-                className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+                className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Modal Form Content */}
             <form onSubmit={handleSaveProfile} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
               <p className="text-[11px] text-zinc-500 font-sans leading-relaxed">
-                Your profile facts are stored locally in your browser. All drills, story shadowing,
-                and Cambridge examiners will personalize exercises to your real identity.
+                Your profile facts are stored locally. The British examiner will adapt Part 1 and Part 2 questions to your genuine identity.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -460,13 +421,13 @@ export function SetupCard({
                     onChange={(e) =>
                       setDraftProfile({ ...draftProfile, fullName: e.target.value })
                     }
-                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
+                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900"
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                    Preferred First Name (for Examiner)
+                    Preferred Name (for Examiner)
                   </label>
                   <input
                     type="text"
@@ -475,7 +436,7 @@ export function SetupCard({
                     onChange={(e) =>
                       setDraftProfile({ ...draftProfile, preferredName: e.target.value })
                     }
-                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
+                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900"
                   />
                 </div>
               </div>
@@ -483,28 +444,7 @@ export function SetupCard({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                    Current Status
-                  </label>
-                  <select
-                    value={draftProfile.status}
-                    onChange={(e) =>
-                      setDraftProfile({
-                        ...draftProfile,
-                        status: e.target.value as CandidateProfile["status"],
-                      })
-                    }
-                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                  >
-                    <option value="working">Currently Working</option>
-                    <option value="studying">Full-Time Student</option>
-                    <option value="both">Working & Studying</option>
-                    <option value="transitioning">Career Transition</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                    Occupation or Major
+                    Profession / Major
                   </label>
                   <input
                     type="text"
@@ -513,29 +453,10 @@ export function SetupCard({
                     onChange={(e) =>
                       setDraftProfile({ ...draftProfile, occupationOrMajor: e.target.value })
                     }
-                    placeholder="e.g. Software Engineer, Medical Researcher"
-                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
+                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                  Field Details / Primary Responsibilities
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={draftProfile.fieldDetails}
-                  onChange={(e) =>
-                    setDraftProfile({ ...draftProfile, fieldDetails: e.target.value })
-                  }
-                  placeholder="e.g. building distributed web applications and cloud backend pipelines"
-                  className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
                     Hometown Name
@@ -547,160 +468,62 @@ export function SetupCard({
                     onChange={(e) =>
                       setDraftProfile({ ...draftProfile, hometownName: e.target.value })
                     }
-                    placeholder="e.g. Chittagong, Manchester, Kyoto"
-                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                    Hometown Atmosphere & Vibe
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={draftProfile.hometownVibe}
-                    onChange={(e) =>
-                      setDraftProfile({ ...draftProfile, hometownVibe: e.target.value })
-                    }
-                    placeholder="e.g. busy maritime seaport nestled between green hills and coastline"
-                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
+                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                    Current Residence
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={draftProfile.currentResidence}
-                    onChange={(e) =>
-                      setDraftProfile({ ...draftProfile, currentResidence: e.target.value })
-                    }
-                    placeholder="e.g. Dhanmondi, Dhaka"
-                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                    Living Setup
-                  </label>
-                  <select
-                    value={draftProfile.livingSetup}
-                    onChange={(e) =>
-                      setDraftProfile({
-                        ...draftProfile,
-                        livingSetup: e.target.value as CandidateProfile["livingSetup"],
-                      })
-                    }
-                    className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                  >
-                    <option value="apartment">Apartment / Flat</option>
-                    <option value="house">Detached House</option>
-                    <option value="shared_flat">Shared Flat</option>
-                    <option value="dormitory">Dormitory</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                  Favorite Room or Space at Home
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={draftProfile.favoriteRoom}
-                  onChange={(e) =>
-                    setDraftProfile({ ...draftProfile, favoriteRoom: e.target.value })
-                  }
-                  placeholder="e.g. sunlit study nook with dual monitors and an espresso maker"
-                  className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                  Morning Routine
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={draftProfile.morningRoutine}
-                  onChange={(e) =>
-                    setDraftProfile({ ...draftProfile, morningRoutine: e.target.value })
-                  }
-                  placeholder="e.g. 30-minute bodyweight workout and brewing pour-over coffee before checking notifications"
-                  className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                  Evening Unwinding Habit
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={draftProfile.unwindingHabit}
-                  onChange={(e) =>
-                    setDraftProfile({ ...draftProfile, unwindingHabit: e.target.value })
-                  }
-                  placeholder="e.g. preparing home-cooked meals from scratch and reading speculative sci-fi novels"
-                  className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
-                  Exam Purpose / Ambition
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={draftProfile.examPurpose}
-                  onChange={(e) =>
-                    setDraftProfile({ ...draftProfile, examPurpose: e.target.value })
-                  }
-                  placeholder="e.g. postgraduate scholarship admission and international career mobility"
-                  className="w-full font-mono text-xs px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+              <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2 font-mono">
                 <button
                   type="button"
-                  onClick={handleResetProfile}
-                  className="flex items-center gap-1.5 px-3 py-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-mono text-xs border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                  onClick={() => setIsProfileModalOpen(false)}
+                  className="px-3 py-2 border border-zinc-200 dark:border-zinc-800 text-zinc-600 hover:text-zinc-900 cursor-pointer text-xs"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>RESET TO DEFAULT</span>
+                  CANCEL
                 </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsProfileModalOpen(false)}
-                    className="px-3 py-2 text-zinc-600 dark:text-zinc-400 font-mono text-xs border border-zinc-200 dark:border-zinc-800 cursor-pointer"
-                  >
-                    CANCEL
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono font-bold text-xs uppercase cursor-pointer"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>SAVE PROFILE</span>
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-bold uppercase cursor-pointer"
+                >
+                  SAVE PROFILE
+                </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* RESET & ERASE CONFIRMATION MODAL */}
+      {/* ============================================================== */}
+      {isResetConfirmOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-950 border border-rose-300 dark:border-rose-900/80 w-full max-w-md p-6 shadow-xl space-y-4 font-mono text-xs">
+            <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold uppercase">
+              <Trash2 className="w-4 h-4" />
+              <span>ERASE ALL LOCAL DATA & START OVER?</span>
+            </div>
+
+            <p className="font-sans text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              This will completely wipe your candidate profile, previous test history scores, and master script vault from your browser. You will start over fresh on Day 1.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsResetConfirmOpen(false)}
+                className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs cursor-pointer"
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmWipe}
+                className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold uppercase text-xs cursor-pointer"
+              >
+                CONFIRM & ERASE EVERYTHING
+              </button>
+            </div>
           </div>
         </div>
       )}
