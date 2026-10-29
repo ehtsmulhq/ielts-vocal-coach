@@ -93,6 +93,7 @@ export interface SpeedDrill {
 
 export interface IeltsExam {
   theme: string;
+  cambridgeRef?: string;
   part1Questions: string[];
   part2CueCard: {
     title: string;
@@ -100,6 +101,7 @@ export interface IeltsExam {
     closing: string;
   };
   part3Questions: string[];
+  recommendedVocabulary?: { phrase: string; meaning: string; example: string }[];
 }
 
 export interface Lesson {
@@ -117,6 +119,7 @@ export interface LessonRequest {
   topic?: string;
   focusArea?: "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed";
   profile?: CandidateProfile;
+  cambridgeTestId?: string;
 }
 
 export interface TranscriptEntry {

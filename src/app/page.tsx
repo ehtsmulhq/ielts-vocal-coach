@@ -124,7 +124,8 @@ export default function Home() {
     topic?: string,
     liveModelId?: string,
     focusArea?: "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed",
-    voiceId?: string
+    voiceId?: string,
+    cambridgeTestId?: string
   ) => {
     setIsLoading(true);
     setErrorMsg(null);
@@ -138,7 +139,7 @@ export default function Home() {
       const lessonRes = await fetch("/api/lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ band: chosenBand, topic, focusArea, profile }),
+        body: JSON.stringify({ band: chosenBand, topic, focusArea, profile, cambridgeTestId }),
       });
       if (!lessonRes.ok) {
         const err = await lessonRes.json().catch(() => ({}));

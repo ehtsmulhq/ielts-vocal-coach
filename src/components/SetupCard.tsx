@@ -5,6 +5,7 @@ import type { CandidateProfile, TargetBand } from "@/lib/types";
 import { LIVE_MODELS, LIVE_VOICES } from "@/lib/models";
 import { CURATED_THEMES } from "@/lib/prompts";
 import { resetProfile } from "@/lib/profile";
+import { CAMBRIDGE_TEST_MODULES } from "@/lib/cambridge-materials";
 import {
   ArrowRight,
   Loader2,
@@ -19,6 +20,7 @@ import {
   Check,
   RotateCcw,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 
 interface SetupCardProps {
@@ -27,7 +29,8 @@ interface SetupCardProps {
     topic?: string,
     liveModel?: string,
     focusArea?: "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed",
-    voice?: string
+    voice?: string,
+    cambridgeTestId?: string
   ) => Promise<void>;
   isLoading: boolean;
   loadingStep: string;
@@ -49,12 +52,26 @@ export function SetupCard({
   const [selectedModel, setSelectedModel] = useState(LIVE_MODELS[0].id);
   const [selectedVoice, setSelectedVoice] = useState(LIVE_VOICES[0].id);
   const [customTopic, setCustomTopic] = useState("");
+  const [selectedCambridgeId, setSelectedCambridgeId] = useState<string>("");
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [draftProfile, setDraftProfile] = useState<CandidateProfile>({ ...profile });
 
   const handleRandomizeTopic = () => {
     const next = CURATED_THEMES[Math.floor(Math.random() * CURATED_THEMES.length)];
     setCustomTopic(next);
+    setSelectedCambridgeId("");
+  };
+
+  const handleSelectCambridgeTest = (testId: string) => {
+    setSelectedCambridgeId(testId);
+    if (!testId) {
+      setCustomTopic("");
+      return;
+    }
+    const found = CAMBRIDGE_TEST_MODULES.find((m) => m.id === testId);
+    if (found) {
+      setCustomTopic(`${found.book} Test ${found.testNumber}: ${found.title}`);
+    }
   };
 
   const focusModes: {
@@ -115,7 +132,14 @@ export function SetupCard({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
-    onStart(band, customTopic.trim() || undefined, selectedModel, focusArea, selectedVoice);
+    onStart(
+      band,
+      customTopic.trim() || undefined,
+      selectedModel,
+      focusArea,
+      selectedVoice,
+      selectedCambridgeId || undefined
+    );
   };
 
   return (
@@ -124,13 +148,13 @@ export function SetupCard({
       <div className="space-y-2 border-b border-zinc-200 dark:border-zinc-800 pb-5">
         <div className="flex items-center justify-between text-[10px] font-mono tracking-widest text-zinc-500 uppercase">
           <span>[ VOCAL LABORATORY CONFIGURATION ]</span>
-          <span>REF: IELTS-ACADEMIC-V4.0</span>
+          <span>REF: CAMBRIDGE-IELTS-ACADEMIC</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-serif tracking-tight text-zinc-900 dark:text-zinc-50">
           English Phonetics & Vocal Laboratory
         </h1>
         <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
-          Grounded Spoken Memory, Formulaic Chunking, and Zero-Hesitation Direct Answer Reflexes.
+          Cambridge Books 11–19 Official Test Materials, Candidate Profile Memory & Zero-Hesitation Reflex Sprints.
         </p>
 
         {/* Candidate Profile Pill Banner */}
@@ -215,12 +239,36 @@ export function SetupCard({
           </div>
         </div>
 
+        {/* Cambridge Official Practice Books Selector */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+            <span className="flex items-center gap-1.5 font-bold">
+              <BookOpen className="w-3.5 h-3.5 text-zinc-500" />
+              II. Official Cambridge IELTS Materials (Books 16–19)
+            </span>
+            <span className="text-[10px] text-zinc-400">Authentic Test Bank</span>
+          </div>
+
+          <select
+            value={selectedCambridgeId}
+            onChange={(e) => handleSelectCambridgeTest(e.target.value)}
+            className="w-full text-xs font-mono px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 cursor-pointer"
+          >
+            <option value="">[ Dynamic Profile Synthesis / Roll Random ]</option>
+            {CAMBRIDGE_TEST_MODULES.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.book} • Test {m.testNumber}: {m.title}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Reading & Drill Theme Selector */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
             <span className="flex items-center gap-1.5 font-bold">
               <Activity className="w-3.5 h-3.5 text-zinc-500" />
-              II. Drill Material Theme
+              III. Session Material Theme
             </span>
             <button
               type="button"
@@ -235,25 +283,35 @@ export function SetupCard({
           <input
             type="text"
             value={customTopic}
-            onChange={(e) => setCustomTopic(e.target.value)}
-            placeholder={`e.g. ${profile.occupationOrMajor} Architecture, ${profile.hometownName} Seaport Roots, Morning Rhythms...`}
+            onChange={(e) => {
+              setCustomTopic(e.target.value);
+              setSelectedCambridgeId("");
+            }}
+            placeholder={`e.g. Cambridge 19: AI & Automation, ${profile.occupationOrMajor} Architecture, Morning Rhythms...`}
             className="w-full text-xs font-mono px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors"
           />
 
-          {/* Quick preset chips personalized to profile */}
+          {/* Quick preset chips */}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {[
+              "Cambridge 19: AI & Workplace Automation",
+              "Cambridge 19: Urban Spaces & Architecture",
+              "Cambridge 18: Environmental Solutions",
+              "Cambridge 18: Health & Nutrition",
               `${profile.occupationOrMajor} Trajectory`,
-              `${profile.hometownName} Roots & Evolution`,
-              "Morning Rhythms & Focus",
-              "Home Workspace Ergonomics",
-              "Evening Unwinding & Culinary Art",
-              "International Academic Relocation",
+              `${profile.hometownName} Roots & Heritage`,
             ].map((theme) => (
               <button
                 key={theme}
                 type="button"
-                onClick={() => setCustomTopic(theme)}
+                onClick={() => {
+                  setCustomTopic(theme);
+                  const found = CAMBRIDGE_TEST_MODULES.find((m) =>
+                    theme.toLowerCase().includes(m.book.toLowerCase()) &&
+                    theme.includes(String(m.testNumber))
+                  );
+                  if (found) setSelectedCambridgeId(found.id);
+                }}
                 className={`text-[10px] font-mono px-2.5 py-1 border transition-all cursor-pointer ${
                   customTopic === theme
                     ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100"
@@ -269,7 +327,7 @@ export function SetupCard({
         {/* Target Level */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-            <span className="font-bold">III. Target Fluency Benchmark</span>
+            <span className="font-bold">IV. Target Fluency Benchmark</span>
             <span className="text-[10px] text-zinc-400">CEFR Benchmark</span>
           </div>
           <div className="grid grid-cols-3 gap-2.5">
@@ -345,11 +403,11 @@ export function SetupCard({
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
-              <span>{loadingStep || "INITIALIZING ACOUSTIC PROTOCOL..."}</span>
+              <span>{loadingStep || "SYNTHESIZING CAMBRIDGE PROTOCOL..."}</span>
             </>
           ) : (
             <>
-              <span>[ INITIALIZE ACOUSTIC PROTOCOL ]</span>
+              <span>[ INITIALIZE CAMBRIDGE ACOUSTIC PROTOCOL ]</span>
               <ArrowRight className="w-4 h-4" />
             </>
           )}
@@ -383,8 +441,7 @@ export function SetupCard({
             <form onSubmit={handleSaveProfile} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
               <p className="text-[11px] text-zinc-500 font-sans leading-relaxed">
                 Your profile facts are stored locally in your browser. All drills, story shadowing,
-                and examiner questions will be customized to your real life so your vocal muscles
-                condition for the real test.
+                and Cambridge examiners will personalize exercises to your real identity.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

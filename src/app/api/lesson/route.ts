@@ -11,9 +11,10 @@ export async function POST(request: Request) {
     const topic = typeof body.topic === "string" ? body.topic.trim().slice(0, 120) : undefined;
     const focusArea = body.focusArea;
     const profile = body.profile as CandidateProfile | undefined;
+    const cambridgeTestId = typeof body.cambridgeTestId === "string" ? body.cambridgeTestId : undefined;
 
     const { data, model } = await generateJson<Lesson>(
-      lessonPrompt({ band, topic, focusArea, profile }),
+      lessonPrompt({ band, topic, focusArea, profile, cambridgeTestId }),
       lessonSchema
     );
     return Response.json({ lesson: data, model });

@@ -577,43 +577,49 @@ export function LessonCard({
           <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
             <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 font-bold flex items-center gap-1.5">
               <Award className="w-3.5 h-3.5 text-zinc-400" />
-              STAGE 4: CAMBRIDGE IELTS EXAM SIMULATION
+              STAGE 4: CAMBRIDGE IELTS EXAM EVALUATION
             </span>
 
-            <div className="flex items-center gap-1 font-mono text-[10px]">
-              <button
-                type="button"
-                onClick={() => setActiveExamPart("part1")}
-                className={`px-2.5 py-0.5 border uppercase transition-all cursor-pointer ${
-                  activeExamPart === "part1"
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
-                    : "border-zinc-200 dark:border-zinc-800 text-zinc-500"
-                }`}
-              >
-                PART 1
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveExamPart("part2")}
-                className={`px-2.5 py-0.5 border uppercase transition-all cursor-pointer ${
-                  activeExamPart === "part2"
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
-                    : "border-zinc-200 dark:border-zinc-800 text-zinc-500"
-                }`}
-              >
-                PART 2 CARD
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveExamPart("part3")}
-                className={`px-2.5 py-0.5 border uppercase transition-all cursor-pointer ${
-                  activeExamPart === "part3"
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
-                    : "border-zinc-200 dark:border-zinc-800 text-zinc-500"
-                }`}
-              >
-                PART 3
-              </button>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[9px] uppercase px-2 py-0.5 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-bold hidden sm:inline">
+                {lesson.ieltsExam.cambridgeRef || "CAMBRIDGE OFFICIAL FORMAT"}
+              </span>
+
+              <div className="flex items-center gap-1 font-mono text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setActiveExamPart("part1")}
+                  className={`px-2.5 py-0.5 border uppercase transition-all cursor-pointer ${
+                    activeExamPart === "part1"
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
+                      : "border-zinc-200 dark:border-zinc-800 text-zinc-500"
+                  }`}
+                >
+                  PART 1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveExamPart("part2")}
+                  className={`px-2.5 py-0.5 border uppercase transition-all cursor-pointer ${
+                    activeExamPart === "part2"
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
+                      : "border-zinc-200 dark:border-zinc-800 text-zinc-500"
+                  }`}
+                >
+                  PART 2 CARD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveExamPart("part3")}
+                  className={`px-2.5 py-0.5 border uppercase transition-all cursor-pointer ${
+                    activeExamPart === "part3"
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
+                      : "border-zinc-200 dark:border-zinc-800 text-zinc-500"
+                  }`}
+                >
+                  PART 3
+                </button>
+              </div>
             </div>
           </div>
 
@@ -638,10 +644,17 @@ export function LessonCard({
           {activeExamPart === "part2" && (
             <div className="space-y-3">
               <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 uppercase">
+                  <span>Candidate Task Card</span>
+                  <span>1 Minute Preparation • 2 Minutes Speaking</span>
+                </div>
                 <h4 className="font-serif font-bold text-base text-zinc-900 dark:text-zinc-100">
                   {lesson.ieltsExam.part2CueCard.title}
                 </h4>
-                <ul className="space-y-1 font-serif text-xs text-zinc-700 dark:text-zinc-300">
+                <p className="text-[11px] font-mono text-zinc-500 italic">
+                  You will have to talk about this topic for one to two minutes. You have one minute to think about what you are going to say. You can make some notes if you wish.
+                </p>
+                <ul className="space-y-1 font-serif text-xs text-zinc-700 dark:text-zinc-300 pt-1">
                   {lesson.ieltsExam.part2CueCard.bullets.map((b, i) => (
                     <li key={i} className="flex items-start gap-1.5">
                       <span className="font-mono text-zinc-400">•</span>
@@ -699,8 +712,9 @@ export function LessonCard({
 
           {activeExamPart === "part3" && (
             <div className="space-y-2">
-              <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-                Part 3 Abstract Discussion Questions
+              <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                <span>Part 3 Abstract Discussion Questions</span>
+                <span>Two-Way Analytical Discussion</span>
               </div>
               {lesson.ieltsExam.part3Questions.map((q, idx) => (
                 <div
@@ -713,6 +727,44 @@ export function LessonCard({
               ))}
             </div>
           )}
+
+          {/* Cambridge Band 8+ Lexical Targets */}
+          {lesson.ieltsExam.recommendedVocabulary &&
+            lesson.ieltsExam.recommendedVocabulary.length > 0 && (
+              <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center justify-between">
+                  <span>Cambridge Band 8.0+ Lexical Collocation Targets:</span>
+                  <span className="text-[9px] text-zinc-400">Aim to weave into Part 2 & 3</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {lesson.ieltsExam.recommendedVocabulary.map((vocab, vIdx) => (
+                    <div
+                      key={vIdx}
+                      className="p-2 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-0.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-serif font-bold text-zinc-900 dark:text-zinc-100">
+                          {vocab.phrase}
+                        </span>
+                        {onSpeakText && (
+                          <button
+                            type="button"
+                            onClick={() => onSpeakText(vocab.phrase, 0.9)}
+                            className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                          >
+                            <Volume2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-500 font-sans">{vocab.meaning}</p>
+                      <p className="text-[10px] text-zinc-400 font-serif italic">
+                        &quot;{vocab.example}&quot;
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
       )}
     </div>
