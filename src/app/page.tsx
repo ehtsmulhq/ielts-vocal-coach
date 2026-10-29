@@ -181,7 +181,8 @@ export default function Home() {
     liveModelId?: string,
     focusArea?: "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed",
     voiceId?: string,
-    cambridgeTestId?: string
+    cambridgeTestId?: string,
+    sceneId?: string
   ) => {
     setIsLoading(true);
     setErrorMsg(null);
@@ -190,12 +191,12 @@ export default function Home() {
     setActiveModel(selectedLive);
 
     try {
-      // Step 1: Generate authentic Cambridge Hot Seat test
+      // Step 1: Generate authentic Cambridge Hot Seat test grounded in Knowledge Graph
       setLoadingStep("Loading Cambridge IELTS Official Hot Seat Test...");
       const lessonRes = await fetch("/api/lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ band: chosenBand, topic, focusArea, profile, cambridgeTestId }),
+        body: JSON.stringify({ band: chosenBand, topic, focusArea, profile, cambridgeTestId, sceneId }),
       });
       if (!lessonRes.ok) {
         const err = await lessonRes.json().catch(() => ({}));

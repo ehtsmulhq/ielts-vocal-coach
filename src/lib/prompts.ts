@@ -93,7 +93,9 @@ GENERATE A STRUCTURED JSON MATCHING THE SCHEMA:
 - hotSeatTest:
   * theme: "${selectedTheme}"
   * cambridgeRef: "${cambridgeModule ? `${cambridgeModule.book} • Test ${cambridgeModule.testNumber}` : "Cambridge IELTS Authentic Format"}"
-  * part1Questions: Exactly 3 or 4 authentic Cambridge Part 1 questions. The first question MUST relate to the candidate's actual work, hometown, or daily habits, before branching into "${selectedTheme}".
+  * part1Questions: Exactly 3 or 4 authentic, everyday Cambridge Part 1 questions.
+    CRITICAL REAL-TEST RULE: Questions MUST be simple, direct, and accessible (e.g., "Do you work or are you a student?", "What do you find most interesting about your job?", "How often do you use public transport?").
+    NEVER construct compound, convoluted, or hyper-specialized inquiries that combine the candidate's technical domain with their morning routine. Real IELTS examiners test communicative flexibility on accessible everyday topics; it is the CANDIDATE who demonstrates high-level vocabulary and syntax.
   * part2CueCard: Authentic Cambridge Task Card (title, 3 bullets, closing sentence).
   * part3Questions: Exactly 3 or 4 deep analytical Cambridge Part 3 discussion questions requiring comparative, speculative, and societal evaluation.
   * recommendedVocabulary: Exactly 3 or 4 Band 8.5/9.0 lexical collocations with meaning, realistic example sentence, and phonetic tip.`;
@@ -174,6 +176,13 @@ ${exam.part2CueCard.bullets.map((b) => `  • ${b}`).join("\n")}
   Closing: "${exam.part2CueCard.closing}"
 - Part 3 Analytical Discussion Prompts:
 ${exam.part3Questions.map((q, i) => `  ${i + 1}. "${q}"`).join("\n")}
+
+STRICT CAMBRIDGE EXAMINER BOUNDS (DO NOT DEVIATE):
+- You are strictly an official British Cambridge IELTS Examiner following standard exam specifications.
+- The Candidate Identity Memory above is strictly for addressing ${p.preferredName} naturally and evaluating their performance in the post-test report.
+- NEVER invent hyper-specialized or convoluted compound questions about their job or routines (e.g. NEVER ask "Given your demanding schedule building cloud infrastructure, how do you manage...").
+- In real IELTS tests, examiners ask direct, accessible, clean questions (e.g., "Do you work or are you a student?", "What do you enjoy most about your job?", "How often do you take public transport?").
+- The candidate will demonstrate their high-level Band 8.5/9.0 vocabulary and cleft sentence structures in their responses. Stick strictly to the Official Exam Blueprint questions below.
 
 AUTHENTIC TURN-TAKING & SPOKEN QUESTION PROTOCOL:
 1. Address the candidate by their preferred name: "${p.preferredName}".

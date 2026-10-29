@@ -22,7 +22,9 @@ import {
   Trash2,
   Calendar,
   Award,
+  Compass,
 } from "lucide-react";
+import { QuestionKnowledgeModal } from "@/components/QuestionKnowledgeModal";
 
 interface SetupCardProps {
   onStartHotSeat: (
@@ -31,7 +33,8 @@ interface SetupCardProps {
     liveModel?: string,
     focusArea?: "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed",
     voice?: string,
-    cambridgeTestId?: string
+    cambridgeTestId?: string,
+    sceneId?: string
   ) => Promise<void>;
   onEnterMirrorGym: () => void;
   onWipeAllData: () => void;
@@ -61,6 +64,8 @@ export function SetupCard({
   const [selectedVoice, setSelectedVoice] = useState(LIVE_VOICES[0].id);
   const [customTopic, setCustomTopic] = useState("");
   const [selectedCambridgeId, setSelectedCambridgeId] = useState<string>("cam-19-test-1");
+  const [selectedSceneId, setSelectedSceneId] = useState<string>("");
+  const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [draftProfile, setDraftProfile] = useState<CandidateProfile>({ ...profile });
@@ -72,10 +77,12 @@ export function SetupCard({
     const next = CURATED_THEMES[Math.floor(Math.random() * CURATED_THEMES.length)];
     setCustomTopic(next);
     setSelectedCambridgeId("");
+    setSelectedSceneId("");
   };
 
   const handleSelectCambridgeTest = (testId: string) => {
     setSelectedCambridgeId(testId);
+    setSelectedSceneId("");
     if (!testId) {
       setCustomTopic("");
       return;
@@ -111,7 +118,8 @@ export function SetupCard({
       selectedModel,
       "full",
       selectedVoice,
-      selectedCambridgeId || undefined
+      selectedCambridgeId || undefined,
+      selectedSceneId || undefined
     );
   };
 
@@ -229,14 +237,45 @@ export function SetupCard({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Step 1: Cambridge Official Test Bank */}
+        {/* Step 1: Cambridge Official Test Bank & Real YouTube Mock Scenes */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+          <div className="flex flex-wrap items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300 gap-1.5">
             <span className="flex items-center gap-1.5 font-bold">
               <BookOpen className="w-3.5 h-3.5 text-zinc-500" />
-              I. Official Cambridge Speaking Test (Books 16–19)
+              I. Official Test Material & Knowledge Graph
             </span>
+            <button
+              type="button"
+              onClick={() => setIsKnowledgeModalOpen(true)}
+              className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
+            >
+              <Compass className="w-3 h-3 text-amber-500" />
+              <span>[ BROWSE YOUTUBE TEST PATTERNS & SCENES ]</span>
+            </button>
           </div>
+
+          {/* Active Knowledge Graph Scene Banner */}
+          {selectedSceneId && (
+            <div className="p-2.5 border border-amber-500/30 bg-amber-500/5 text-amber-900 dark:text-amber-200 text-xs font-mono flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <span className="font-bold uppercase text-[10px] text-amber-600 dark:text-amber-400 flex-shrink-0">
+                  [ REAL YOUTUBE SCENE ]:
+                </span>
+                <span className="truncate max-w-sm font-sans font-medium text-zinc-900 dark:text-zinc-100">{customTopic}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSceneId("");
+                  setSelectedCambridgeId("cam-19-test-1");
+                  setCustomTopic("");
+                }}
+                className="text-[10px] text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 underline cursor-pointer ml-2 flex-shrink-0"
+              >
+                Reset
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {CAMBRIDGE_TEST_MODULES.slice(0, 4).map((mod) => {
@@ -541,6 +580,19 @@ export function SetupCard({
           </div>
         </div>
       )}
+
+      {/* ============================================================== */}
+      {/* REAL TEST QUESTION PATTERNS & KNOWLEDGE GRAPH MODAL */}
+      {/* ============================================================== */}
+      <QuestionKnowledgeModal
+        isOpen={isKnowledgeModalOpen}
+        onClose={() => setIsKnowledgeModalOpen(false)}
+        onSelectScene={(scene) => {
+          setSelectedSceneId(scene.id);
+          setSelectedCambridgeId("");
+          setCustomTopic(scene.cueCard.title);
+        }}
+      />
     </div>
   );
 }

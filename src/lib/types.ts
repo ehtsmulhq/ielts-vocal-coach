@@ -107,6 +107,7 @@ export interface LessonRequest {
   focusArea?: "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed";
   profile?: CandidateProfile;
   cambridgeTestId?: string;
+  sceneId?: string;
 }
 
 export interface TranscriptEntry {
