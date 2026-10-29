@@ -66,7 +66,7 @@ export function FeedbackReport({
                 className="w-full sm:w-auto py-3 px-4 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-900 dark:border-zinc-100"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>[ ENTER MASTER MIRROR GYM ]</span>
+                <span>Practice in Mirror Gym</span>
               </button>
             )}
             <button
@@ -75,7 +75,7 @@ export function FeedbackReport({
               className="w-full sm:w-auto py-3 px-4 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-300 dark:border-zinc-700"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>[ START NEW HOT SEAT ]</span>
+              <span>Start New Hot Seat</span>
             </button>
           </div>
         </div>
@@ -257,7 +257,7 @@ export function FeedbackReport({
             className="w-full sm:w-auto px-6 py-4 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100 flex items-center justify-center gap-2 shadow-sm"
           >
             <Flame className="w-4 h-4 text-amber-500" />
-            <span>[ ENTER MASTER MIRROR GYM (DRILL TODAY&apos;S UPGRADED SCRIPT) → ]</span>
+            <span>Practice Today&apos;s Upgraded Script →</span>
           </button>
         )}
         <button
@@ -266,7 +266,7 @@ export function FeedbackReport({
           className="w-full sm:w-auto px-6 py-4 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-300 dark:border-zinc-700 flex items-center justify-center gap-2"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>[ TAKE ANOTHER TEST ]</span>
+          <span>Take Another Test</span>
         </button>
       </div>
     </div>

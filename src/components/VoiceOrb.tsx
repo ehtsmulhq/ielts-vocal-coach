@@ -290,7 +290,7 @@ export function VoiceOrb({
       {/* Push to talk instruction bar */}
       {micMode === "push-to-talk" && (
         <div className="w-full text-center font-mono text-[10px] text-zinc-500 py-1 border-t border-zinc-200 dark:border-zinc-800">
-          [ HOLD <kbd className="px-1 bg-zinc-200 dark:bg-zinc-800 font-bold">SPACEBAR</kbd> TO SPEAK ]
+          Hold <kbd className="px-1 bg-zinc-200 dark:bg-zinc-800 font-bold">Spacebar</kbd> to speak
         </div>
       )}
     </div>

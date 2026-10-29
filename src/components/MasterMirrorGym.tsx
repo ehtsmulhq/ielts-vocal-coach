@@ -379,18 +379,17 @@ export function MasterMirrorGym({
       {/* Header & Vault Status Banner */}
       <div className="flex flex-wrap items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2.5 gap-2 font-mono text-xs">
         <div className="flex items-center gap-2">
-          <span className="font-bold uppercase tracking-widest text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+          <span className="font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-zinc-400" />
-            MASTER SCRIPT APPRENTICESHIP GYM
+            Mirror Practice Gym
           </span>
-          <span className="text-[10px] text-zinc-400 hidden sm:inline">[ AI COACH ACTIVELY LISTENING & FIXING MISTAKES ]</span>
         </div>
 
         {/* Persistent Streak & Total Reps Badge */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 px-2.5 py-0.5 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold">
             <Flame className="w-3 h-3 text-amber-500" />
-            <span>TOTAL REPS: {repository.totalPracticeCount}</span>
+            <span>Total Reps: {repository.totalPracticeCount}</span>
           </div>
 
           {onStartHotSeatRetake && (
@@ -400,7 +399,7 @@ export function MasterMirrorGym({
               className="text-[10px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1 cursor-pointer transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>[ RETAKE HOT SEAT ]</span>
+              <span>Retake Test</span>
             </button>
           )}
         </div>
@@ -427,7 +426,7 @@ export function MasterMirrorGym({
                   : "border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400 bg-white dark:bg-zinc-950"
               }`}
             >
-              0{idx + 1}. {item.category.toUpperCase()}
+              0{idx + 1}. {item.category}
             </button>
           ))}
         </div>
@@ -456,62 +455,53 @@ export function MasterMirrorGym({
       <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-1.5">
         <div className="flex items-center justify-between font-mono text-[10px] uppercase text-zinc-500">
           <span className="font-bold">{currentItem.title}</span>
-          <span>CANONICAL EXAM PROMPT</span>
+          <span>Examiner Prompt</span>
         </div>
         <p className="font-serif font-bold text-base sm:text-lg text-zinc-900 dark:text-zinc-100 leading-snug">
           &ldquo;{currentItem.question}&rdquo;
         </p>
       </div>
 
-      {/* Step 1: Listen to the Master Model First */}
-      <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-          <span className="font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-            <Volume2 className="w-3.5 h-3.5 text-zinc-500" />
-            STEP 1: THE MASTER EXEMPLAR (MIRROR FIRST)
-          </span>
-          <span className="text-zinc-400 text-[9px] hidden sm:inline">
-            Absorb native British RP sentence melody
+      {/* Step 1: Model Exemplar */}
+      <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+        <div className="flex items-center gap-2">
+          <Volume2 className="w-3.5 h-3.5 text-zinc-500" />
+          <span className="font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider text-[11px]">
+            1. Model Answer
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-900">
-          <p className="text-[11px] text-zinc-500 font-sans italic max-w-sm">
-            Listen with eyes closed. Notice where the voice rises, lingers on stressed vowels, and settles with authority.
-          </p>
-
-          {onSpeakText && (
-            <div className="flex items-center gap-2">
-              {isCoachSpeaking ? (
+        {onSpeakText && (
+          <div className="flex items-center gap-2">
+            {isCoachSpeaking ? (
+              <button
+                type="button"
+                onClick={onStopSpeech}
+                className="px-3 py-1 border border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-mono text-[10px] uppercase font-bold cursor-pointer"
+              >
+                Stop Audio
+              </button>
+            ) : (
+              <>
                 <button
                   type="button"
-                  onClick={onStopSpeech}
-                  className="px-3 py-1 border border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-mono text-[10px] uppercase font-bold cursor-pointer"
+                  onClick={() => onSpeakText(currentItem.upgradedScript, 0.85)}
+                  className="px-2.5 py-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 font-mono text-[10px] uppercase text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 cursor-pointer"
                 >
-                  STOP AUDIO
+                  0.85x
                 </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => onSpeakText(currentItem.upgradedScript, 0.85)}
-                    className="px-2.5 py-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 font-mono text-[10px] uppercase text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 cursor-pointer"
-                  >
-                    ARTICULATION 0.85X
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSpeakText(currentItem.upgradedScript, 1.0)}
-                    className="px-3 py-1 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-mono text-[10px] uppercase font-bold cursor-pointer shadow-xs flex items-center gap-1"
-                  >
-                    <Play className="w-3 h-3 fill-current" />
-                    <span>MODEL 1.0X</span>
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+                <button
+                  type="button"
+                  onClick={() => onSpeakText(currentItem.upgradedScript, 1.0)}
+                  className="px-3 py-1 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-mono text-[10px] uppercase font-bold cursor-pointer shadow-xs flex items-center gap-1"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Play Model (1.0x)</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Step 2: Live AI Coach Interactive Listening & Teleprompter */}
@@ -519,12 +509,12 @@ export function MasterMirrorGym({
         <div className="flex flex-wrap items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500 pb-2 border-b border-zinc-200 dark:border-zinc-800 gap-2">
           <div className="flex items-center gap-2">
             <span className="font-bold text-zinc-900 dark:text-zinc-100">
-              STEP 2: DELIVER & LET DR. VANCE FIX MISTAKES
+              2. Deliver & Check Feedback
             </span>
             {isListening && (
               <span className="px-1.5 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/20 flex items-center gap-1 animate-pulse">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                <span>AI COACH LISTENING LIVE</span>
+                <span>Listening...</span>
               </span>
             )}
           </div>
@@ -533,9 +523,9 @@ export function MasterMirrorGym({
             <div className="flex items-center gap-1 text-zinc-700 dark:text-zinc-300">
               <Activity className="w-3 h-3 text-zinc-500" />
               <span>
-                CADENCE:{" "}
+                Cadence:{" "}
                 <strong className="text-zinc-900 dark:text-zinc-100">
-                  {calculatedWpm > 0 ? `${calculatedWpm} WPM` : `${currentItem.masterCadenceWpm} WPM (TARGET)`}
+                  {calculatedWpm > 0 ? `${calculatedWpm} WPM` : `${currentItem.masterCadenceWpm} WPM (target)`}
                 </strong>
               </span>
             </div>
@@ -543,14 +533,14 @@ export function MasterMirrorGym({
             <button
               type="button"
               onClick={() => setShowOriginalComparison(!showOriginalComparison)}
-              className="text-[9px] underline text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+              className="text-[10px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
             >
-              {showOriginalComparison ? "[ HIDE ORIGINAL TAKE 1 ]" : "[ VIEW ORIGINAL TAKE 1 ]"}
+              {showOriginalComparison ? "Hide Original Take" : "View Original Take"}
             </button>
           </div>
         </div>
 
-        {/* Live Audio Oscilloscope & Speech Input Bar */}
+        {/* Speech Input & Control Bar */}
         <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 font-mono text-xs">
           <div className="flex items-center gap-3">
             {!isListening ? (
@@ -559,8 +549,8 @@ export function MasterMirrorGym({
                 onClick={startListening}
                 className="py-2 px-4 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-bold uppercase text-xs tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-sm"
               >
-                <Mic className="w-4 h-4 text-emerald-400 dark:text-emerald-600 animate-pulse" />
-                <span>[ 🎙️ START AI COACH LISTENING ]</span>
+                <Mic className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
+                <span>Start Recording</span>
               </button>
             ) : (
               <div className="flex items-center gap-2">
@@ -570,7 +560,7 @@ export function MasterMirrorGym({
                   className="py-2 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold uppercase text-xs tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-sm animate-pulse"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
-                  <span>[ ⏹️ STOP & FIX MY MISTAKES ]</span>
+                  <span>Stop & Review</span>
                 </button>
                 <button
                   type="button"
@@ -588,7 +578,7 @@ export function MasterMirrorGym({
               <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
                 <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  MIC ACTIVE:
+                  Mic Active:
                 </span>
                 <div className="w-24 h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden border border-zinc-300 dark:border-zinc-700">
                   <div
@@ -604,8 +594,8 @@ export function MasterMirrorGym({
           {/* Quick Guidance */}
           <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-sans italic">
             {isListening
-              ? "Read the master script out loud with natural rhythm. Tap Stop when finished to let Dr. Vance analyze."
-              : "Tap the microphone, read the upgraded text, then tap Stop to let Dr. Vance analyze."}
+              ? "Read aloud with natural pacing. Tap Stop when finished."
+              : "Tap Start Recording, read aloud with natural rhythm, then tap Stop."}
           </div>
         </div>
 
@@ -654,7 +644,7 @@ export function MasterMirrorGym({
         )}
 
         {/* Dynamic Teleprompter Words */}
-        <p className="text-base sm:text-lg leading-relaxed font-serif text-zinc-900 dark:text-zinc-100">
+        <p className="text-base sm:text-lg leading-relaxed font-serif text-zinc-900 dark:text-zinc-100 py-1">
           {words.map((w, idx) => {
             const cleanWord = w.toLowerCase().replace(/[^a-z0-9]/g, "");
             const isSpokenByCandidate = spokenWords.some(
@@ -680,24 +670,6 @@ export function MasterMirrorGym({
             );
           })}
         </p>
-
-        {/* Thought Chunks Breakdown with Pipe Breath Notation */}
-        <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-1.5">
-          <div className="font-mono text-[10px] uppercase text-zinc-500 font-bold flex items-center justify-between">
-            <span>Rhythmic Phrasing & Natural Breath Units:</span>
-            <span className="text-[9px] text-zinc-400">INSUFLATE AT &apos;|&apos;</span>
-          </div>
-          <div className="space-y-1 font-serif text-xs leading-relaxed text-zinc-800 dark:text-zinc-200">
-            {currentItem.thoughtChunks.map((chunk, cIdx) => (
-              <div key={cIdx} className="flex items-start gap-2">
-                <span className="font-mono text-[10px] text-zinc-400">[{cIdx + 1}]</span>
-                <span className="font-medium">
-                  {chunk.endsWith("|") ? chunk : `${chunk} |`}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* ============================================================== */}
@@ -707,10 +679,10 @@ export function MasterMirrorGym({
         <div className="p-6 border border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-900 text-center font-mono space-y-3 animate-in fade-in">
           <div className="w-8 h-8 mx-auto border-2 border-zinc-900 dark:border-zinc-100 border-t-transparent animate-spin" />
           <div className="text-xs font-bold uppercase tracking-widest text-zinc-900 dark:text-zinc-100">
-            DR. JONATHAN VANCE ANALYZING YOUR MOTOR ARTICULATION & MISTAKES...
+            Analyzing delivery and pronunciation...
           </div>
           <p className="text-[11px] text-zinc-500 font-sans max-w-sm mx-auto">
-            Comparing spoken words with Band 8.5 master script, calculating cadence WPM, and spotting omissions...
+            Comparing spoken delivery with target pacing and collocations...
           </p>
         </div>
       )}
@@ -722,29 +694,29 @@ export function MasterMirrorGym({
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-500" />
               <span className="font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
-                DR. VANCE&apos;S VOCAL COACH REPORT
+                Delivery & Accuracy Feedback
               </span>
             </div>
 
             <div className="flex items-center gap-2 font-mono text-[10px]">
               <span className="px-2 py-0.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 font-bold">
-                ACCURACY: {coachAnalysis.accuracyScore}%
+                Accuracy: {coachAnalysis.accuracyScore}%
               </span>
               <span className="px-2 py-0.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 font-bold">
-                SPEED: {coachAnalysis.actualWpm} WPM
+                Pacing: {coachAnalysis.actualWpm} WPM
               </span>
               <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/30">
-                {coachAnalysis.fluencyRating.toUpperCase()}
+                {coachAnalysis.fluencyRating}
               </span>
             </div>
           </div>
 
-          {/* Dr. Vance's Direct Spoken Assessment */}
+          {/* Coach Spoken Assessment */}
           <div className="p-3.5 border border-amber-500/30 bg-amber-500/5 space-y-2">
             <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold text-amber-800 dark:text-amber-300">
               <span className="flex items-center gap-1.5">
                 <Volume2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                Dr. Vance&apos;s Spoken Feedback:
+                Coach Commentary:
               </span>
               {onSpeakText && (
                 <button
@@ -753,7 +725,7 @@ export function MasterMirrorGym({
                   className="hover:underline cursor-pointer flex items-center gap-1"
                 >
                   <RefreshCw className="w-3 h-3" />
-                  <span>[ HEAR AGAIN ]</span>
+                  <span>Hear Again</span>
                 </button>
               )}
             </div>
@@ -765,7 +737,7 @@ export function MasterMirrorGym({
           {/* Specific Mistakes Detected & Exact Fixes */}
           <div className="space-y-2.5">
             <div className="font-mono text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
-              SPECIFIC MISTAKES SPOTTED & HOW TO FIX THEM:
+              Suggested Corrections:
             </div>
 
             {coachAnalysis.mistakes.length === 0 ? (
@@ -792,20 +764,20 @@ export function MasterMirrorGym({
                           title="Listen to model articulation"
                         >
                           <Volume2 className="w-3 h-3" />
-                          <span>Hear Model Articulation</span>
+                          <span>Hear Model</span>
                         </button>
                       )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                       <div className="p-2 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-                        <span className="text-zinc-400 font-mono text-[9px] uppercase block">You Uttered:</span>
+                        <span className="text-zinc-400 font-mono text-[9px] uppercase block">You Said:</span>
                         <span className="font-serif italic text-rose-600 dark:text-rose-400 font-medium">
                           &ldquo;{m.userSaid}&rdquo;
                         </span>
                       </div>
                       <div className="p-2 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-                        <span className="text-zinc-400 font-mono text-[9px] uppercase block">Target Master Phrase:</span>
+                        <span className="text-zinc-400 font-mono text-[9px] uppercase block">Target Phrase:</span>
                         <span className="font-serif text-emerald-700 dark:text-emerald-400 font-bold">
                           &ldquo;{m.targetPhrase}&rdquo;
                         </span>
@@ -813,7 +785,7 @@ export function MasterMirrorGym({
                     </div>
 
                     <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-snug">
-                      <strong className="text-zinc-900 dark:text-zinc-100 font-mono text-[10px] uppercase">Dr. Vance&apos;s Fix: </strong>
+                      <strong className="text-zinc-900 dark:text-zinc-100 font-mono text-[10px] uppercase">Correction: </strong>
                       {m.coachCorrection}
                     </p>
                   </div>
@@ -830,7 +802,7 @@ export function MasterMirrorGym({
               className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 uppercase font-bold text-[11px] cursor-pointer flex items-center gap-1.5"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>[ RETRY THIS REP IMMEDIATELY ]</span>
+              <span>Retry Rep</span>
             </button>
 
             <button
@@ -845,12 +817,12 @@ export function MasterMirrorGym({
               {repJustLogged ? (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>REP LOGGED TO VAULT!</span>
+                  <span>Rep Logged!</span>
                 </>
               ) : (
                 <>
                   <Award className="w-3.5 h-3.5" />
-                  <span>[ ACCEPT & LOG REPETITION COMPLETED ✅ ]</span>
+                  <span>Save Practice Rep</span>
                 </>
               )}
             </button>
@@ -861,8 +833,8 @@ export function MasterMirrorGym({
       {/* Target Collocations Bank */}
       <div className="space-y-2">
         <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-          <span>Band 8.5+ Collocation Anchors in This Answer</span>
-          <span>Tap to Hear Model</span>
+          <span>Key Collocations & Phrases</span>
+          <span>Listen</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
@@ -895,7 +867,7 @@ export function MasterMirrorGym({
       {/* Step 3: Repetition Logging & Workout Cycle Tracker */}
       <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase text-zinc-400 font-bold mr-1">WORKOUT PHASE:</span>
+          <span className="text-[10px] uppercase text-zinc-400 font-bold mr-1">Mode:</span>
           {(["absorb", "shadow", "deliver"] as const).map((mode) => (
             <button
               key={mode}
@@ -914,9 +886,9 @@ export function MasterMirrorGym({
                   : "bg-white dark:bg-zinc-950 text-zinc-500 border-zinc-200 dark:border-zinc-800"
               }`}
             >
-              {mode === "absorb" && "1. ABSORB"}
-              {mode === "shadow" && "2. SHADOW (MIC ON)"}
-              {mode === "deliver" && "3. DELIVER (MIC ON)"}
+              {mode === "absorb" && "1. Listen"}
+              {mode === "shadow" && "2. Shadow"}
+              {mode === "deliver" && "3. Deliver"}
             </button>
           ))}
         </div>
@@ -933,12 +905,12 @@ export function MasterMirrorGym({
           {repJustLogged ? (
             <>
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>REP LOGGED TO VAULT!</span>
+              <span>Rep Logged!</span>
             </>
           ) : (
             <>
               <Award className="w-3.5 h-3.5" />
-              <span>[ LOG REPETITION COMPLETED ✅ ]</span>
+              <span>Save Practice Rep</span>
             </>
           )}
         </button>

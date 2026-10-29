@@ -148,7 +148,7 @@ export function saveTestSession(record: Omit<HotSeatSessionRecord, "id" | "dayNu
         "Baseline answers captured into Master Script Vault for daily acoustic repetition",
       ],
       focusAreasForTomorrow: [
-        "Use Master Mirror Gym to shadow your Band 8.5 upgraded script 3 times today",
+        "Practice in the Mirror Gym with your upgraded script 3 times today",
         "Target zero hesitation pauses in tomorrow's Part 1 interview",
       ],
     };

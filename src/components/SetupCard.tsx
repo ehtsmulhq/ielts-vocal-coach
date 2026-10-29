@@ -127,13 +127,13 @@ export function SetupCard({
     <div className="w-full max-w-2xl mx-auto my-auto bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm space-y-6 animate-in fade-in duration-300">
       {/* Editorial Header */}
       <div className="space-y-2 border-b border-zinc-200 dark:border-zinc-800 pb-5">
-        <div className="flex items-center justify-between text-[10px] font-mono tracking-widest text-zinc-500 uppercase">
+        <div className="flex items-center justify-between text-[10px] font-mono tracking-wider text-zinc-500 uppercase">
           <span className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100">
             <Award className="w-3.5 h-3.5 text-zinc-500" />
-            AUTHENTIC CAMBRIDGE IELTS HOT SEAT
+            Cambridge IELTS Speaking
           </span>
           <span className="bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 border border-zinc-200 dark:border-zinc-800 font-bold">
-            {testHistory.length === 0 ? "DAY 1 • BASELINE TEST" : `DAY ${currentDay} • PROGRESS TRACKER`}
+            {testHistory.length === 0 ? "Day 1 • Baseline" : `Day ${currentDay} • Progress`}
           </span>
         </div>
 
@@ -151,7 +151,7 @@ export function SetupCard({
               <div className="space-y-0.5">
                 <div className="text-[10px] uppercase font-bold text-zinc-500 flex items-center gap-1.5">
                   <Calendar className="w-3 h-3 text-zinc-400" />
-                  <span>LAST SESSION (DAY {lastSession.dayNumber} • {lastSession.dateStr})</span>
+                  <span>Last Session (Day {lastSession.dayNumber} • {lastSession.dateStr})</span>
                 </div>
                 <p className="font-serif font-bold text-sm text-zinc-900 dark:text-zinc-100">
                   Overall Band: {lastSession.overallBand.toFixed(1)} / 9.0 • {lastSession.metrics.wpm} WPM
@@ -172,7 +172,7 @@ export function SetupCard({
                   className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 text-[11px] font-bold uppercase cursor-pointer hover:bg-zinc-100 transition-colors flex items-center gap-1"
                 >
                   <Flame className="w-3 h-3 text-amber-500" />
-                  <span>MIRROR GYM ({masterPracticeCount} REPS)</span>
+                  <span>Mirror Gym ({masterPracticeCount} reps)</span>
                 </button>
               </div>
             </div>
@@ -187,7 +187,7 @@ export function SetupCard({
             </div>
             <div className="text-xs">
               <span className="font-mono text-[10px] uppercase text-zinc-400 block leading-none">
-                CANDIDATE IDENTITY
+                Candidate Profile
               </span>
               <span className="font-serif font-bold text-zinc-900 dark:text-zinc-100">
                 {profile.preferredName || profile.fullName}
@@ -204,10 +204,10 @@ export function SetupCard({
                 type="button"
                 onClick={onOpenGrill}
                 className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
-                title="Re-run the intake grill to extract fresh personal anchors"
+                title="Re-run the intake interview to extract fresh personal details"
               >
                 <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>[ CANDIDATE GRILL ]</span>
+                <span>Intake Interview</span>
               </button>
             )}
 
@@ -220,17 +220,7 @@ export function SetupCard({
               className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
             >
               <Edit3 className="w-3 h-3" />
-              <span>[ EDIT ]</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsResetConfirmOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono border border-rose-300 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors cursor-pointer"
-              title="Wipe all local data and start fresh"
-            >
-              <Trash2 className="w-3 h-3" />
-              <span>RESET ALL</span>
+              <span>Edit</span>
             </button>
           </div>
         </div>
@@ -239,10 +229,10 @@ export function SetupCard({
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Step 1: Cambridge Official Test Bank & Real YouTube Mock Scenes */}
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300 gap-1.5">
-            <span className="flex items-center gap-1.5 font-bold">
+          <div className="flex flex-wrap items-center justify-between text-[11px] font-mono tracking-wider text-zinc-700 dark:text-zinc-300 gap-1.5">
+            <span className="flex items-center gap-1.5 font-bold uppercase">
               <BookOpen className="w-3.5 h-3.5 text-zinc-500" />
-              I. Official Test Material & Knowledge Graph
+              Topic & Test Material
             </span>
             <button
               type="button"
@@ -250,7 +240,7 @@ export function SetupCard({
               className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
             >
               <Compass className="w-3 h-3 text-amber-500" />
-              <span>[ BROWSE YOUTUBE TEST PATTERNS & SCENES ]</span>
+              <span>Browse Test Patterns</span>
             </button>
           </div>
 
@@ -258,8 +248,8 @@ export function SetupCard({
           {selectedSceneId && (
             <div className="p-2.5 border border-amber-500/30 bg-amber-500/5 text-amber-900 dark:text-amber-200 text-xs font-mono flex items-center justify-between animate-in fade-in">
               <div className="flex items-center gap-2 overflow-hidden">
-                <span className="font-bold uppercase text-[10px] text-amber-600 dark:text-amber-400 flex-shrink-0">
-                  [ REAL YOUTUBE SCENE ]:
+                <span className="font-bold text-[10px] text-amber-600 dark:text-amber-400 flex-shrink-0">
+                  Real Test Scene:
                 </span>
                 <span className="truncate max-w-sm font-sans font-medium text-zinc-900 dark:text-zinc-100">{customTopic}</span>
               </div>
@@ -293,9 +283,9 @@ export function SetupCard({
                 >
                   <div className="flex items-center justify-between font-mono text-[9px] uppercase text-zinc-500 mb-0.5">
                     <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                      {mod.book} • TEST {mod.testNumber}
+                      {mod.book} • Test {mod.testNumber}
                     </span>
-                    {isSelected && <span className="font-bold text-zinc-900 dark:text-zinc-100">[ SELECTED ]</span>}
+                    {isSelected && <span className="font-bold text-zinc-900 dark:text-zinc-100">Selected</span>}
                   </div>
                   <h4 className="font-serif font-bold text-xs text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-1">
                     {mod.title}
@@ -336,15 +326,15 @@ export function SetupCard({
           <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
             <span className="flex items-center gap-1.5 font-bold">
               <Sliders className="w-3.5 h-3.5 text-zinc-500" />
-              II. Target IELTS Communicative Band
+              Target Band Score
             </span>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
             {[
-              { id: "5.5" as TargetBand, title: "Band 5.5", subtitle: "Zero Hesitation Flow" },
-              { id: "6.5" as TargetBand, title: "Band 6.5", subtitle: "Syntactic Coherence" },
-              { id: "7.5" as TargetBand, title: "Band 7.5 - 9.0", subtitle: "Effortless RP Articulation" },
+              { id: "5.5" as TargetBand, title: "Band 5.5", subtitle: "Intermediate" },
+              { id: "6.5" as TargetBand, title: "Band 6.5", subtitle: "Competent" },
+              { id: "7.5" as TargetBand, title: "Band 7.5+", subtitle: "Advanced" },
             ].map((b) => {
               const isSelected = band === b.id;
               return (
@@ -413,11 +403,11 @@ export function SetupCard({
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
-                <span>{loadingStep || "COMMENCING AUTHENTIC HOT SEAT INTERVIEW..."}</span>
+                <span>{loadingStep || "Starting speaking interview..."}</span>
               </>
             ) : (
               <>
-                <span>[ 🎙️ ENTER TODAY&apos;S AUTHENTIC HOT SEAT TEST ]</span>
+                <span>Start Speaking Interview</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -430,7 +420,7 @@ export function SetupCard({
             className="w-full py-2.5 px-4 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono text-xs uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-200 dark:border-zinc-800"
           >
             <Flame className="w-3.5 h-3.5 text-amber-500" />
-            <span>[ 🔁 ENTER DAILY MIRROR GYM (DELIBERATE REPETITION) ]</span>
+            <span>Mirror Practice</span>
           </button>
         </div>
       </form>

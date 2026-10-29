@@ -80,7 +80,7 @@ export function QuestionKnowledgeModal({
         <div className="px-4 sm:px-5 py-2.5 bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-xs font-sans flex items-start gap-2.5 text-zinc-600 dark:text-zinc-300">
           <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
           <div className="leading-snug text-[11px]">
-            <strong className="text-zinc-900 dark:text-zinc-100">Official Examiner Rule:</strong> Real IELTS examiners ask direct, accessible, everyday questions. They never ask compound, convoluted personal inquiries. It is the <span className="underline decoration-amber-500 font-semibold">candidate</span> who produces sophisticated Band 8.5/9.0 answers!
+            <strong className="text-zinc-900 dark:text-zinc-100">Official Examiner Rule:</strong> Real IELTS examiners ask direct, accessible, everyday questions. They never ask compound, convoluted personal inquiries. It is the <span className="underline decoration-amber-500 font-semibold">candidate</span> who produces high-scoring answers with natural fluency and precision!
           </div>
         </div>
 
@@ -215,7 +215,7 @@ export function QuestionKnowledgeModal({
                       }}
                       className="w-full py-2 px-3 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-[11px] uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-2"
                     >
-                      <span>[ PRACTICE THIS SCENE IN HOT SEAT ]</span>
+                      <span>Practice This Scene</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -228,7 +228,7 @@ export function QuestionKnowledgeModal({
           {activeTab === "part1" && (
             <div className="space-y-4">
               <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 text-xs font-sans text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Examiners in real IELTS tests and YouTube mock interviews draw strictly from standard Part 1 pools. Notice how every question is simple and conversational. The candidate’s task is to provide Band 8.5/9.0 answers with cleft sentences and fronted adverbials.
+                Examiners in real IELTS tests and YouTube mock interviews draw strictly from standard Part 1 pools. Every question is direct and conversational; the candidate provides structured, natural answers.
               </div>
 
               <div className="space-y-3">

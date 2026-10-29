@@ -69,9 +69,9 @@ export function CandidateGrillModal({
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
           <div className="space-y-1">
-            <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 font-bold flex items-center gap-1.5">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              AUTHENTIC ANCHOR EXTRACTION (ONLY WHAT BEAUTIFIES YOUR ANSWERS)
+              Candidate Profile Intake
             </div>
             <h2 className="text-xl sm:text-2xl font-serif font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
               {step === 1 && "What is your official name and preferred examiner address?"}
@@ -83,11 +83,11 @@ export function CandidateGrillModal({
               {step === 1 &&
                 "The examiner will open Part 1 with a formal greeting and immediately pivot to addressing you naturally."}
               {step === 2 &&
-                "We don't need generic job titles. Give me the real problems, tools, or responsibilities that make your craft engaging so the AI can build Band 8.5 cleft sentences."}
+                "Share the real problems, tools, or responsibilities that make your craft engaging so your practice answers feel authentic."}
               {step === 3 &&
-                "Give me the atmospheric vibe (maritime port, tea gardens, bustling urban bazaar) to power authentic fronted adverbials."}
+                "Describe the atmosphere (e.g. green tea hills, coastal breeze, bustling markets) that characterizes your hometown."}
               {step === 4 &&
-                "Describe your physical room setup or how you recharge your energy. These details make Part 1 and Cue Card monologues sound breathtakingly authentic."}
+                "Describe where you think or how you recharge. These details help personalize your cue card practice."}
             </p>
           </div>
 
@@ -311,7 +311,7 @@ export function CandidateGrillModal({
               <div className="p-3 border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-[11px] font-mono text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 <span>
-                  All 4 authentic anchors extracted! Your answers will be infused with natural Band 8.5/9.0 phrasing.
+                  All details saved! Your practice responses will sound authentic and natural.
                 </span>
               </div>
             </div>
@@ -328,7 +328,7 @@ export function CandidateGrillModal({
                 className="px-3.5 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>PREVIOUS</span>
+                <span>Previous</span>
               </button>
             ) : onSkip ? (
               <button
@@ -336,7 +336,7 @@ export function CandidateGrillModal({
                 onClick={onSkip}
                 className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-[11px] cursor-pointer"
               >
-                [ USE DEFAULT TEMPLATE ]
+                Skip for now
               </button>
             ) : (
               <div />
@@ -350,13 +350,13 @@ export function CandidateGrillModal({
           >
             {step < 4 ? (
               <>
-                <span>NEXT ANCHOR</span>
+                <span>Next</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
             ) : (
               <>
                 <Flame className="w-3.5 h-3.5 text-amber-500" />
-                <span>[ LOCK ANCHORS & ENTER HOT SEAT → ]</span>
+                <span>Save Profile & Start →</span>
               </>
             )}
           </button>

@@ -652,7 +652,7 @@ export default function Home() {
             <span className="font-serif font-bold text-sm sm:text-base tracking-tight text-zinc-900 dark:text-zinc-100">
               CAMBRIDGE HOT SEAT
             </span>
-            <span className="text-[10px] text-zinc-400 hidden sm:inline">[ IELTS-ACADEMIC ]</span>
+            <span className="text-[10px] text-zinc-400 hidden sm:inline">IELTS Academic</span>
           </div>
 
           {/* Stepper in Header for Live Session */}
@@ -683,7 +683,7 @@ export default function Home() {
           {view === "mirrorgym" && (
             <div className="flex items-center gap-2 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
               <Sparkles className="w-3.5 h-3.5" />
-              <span className="uppercase tracking-wider hidden sm:inline">ACOUSTIC APPRENTICESHIP GYM</span>
+              <span className="tracking-wider hidden sm:inline">Mirror Practice</span>
             </div>
           )}
         </div>
@@ -698,7 +698,7 @@ export default function Home() {
               title="Erase all local storage data and start over"
             >
               <Trash2 className="w-3 h-3" />
-              <span>[ ERASE DATA & START OVER ]</span>
+              <span>Erase Data & Restart</span>
             </button>
           )}
 
@@ -815,8 +815,8 @@ export default function Home() {
                 >
                   <span>
                     {isLastStage
-                      ? "[ GENERATE OFFICIAL DIAGNOSTIC REPORT ]"
-                      : `[ ADVANCE TO ${STAGES[currentStageIndex + 1]?.label.toUpperCase() || "NEXT PART"} → ]`}
+                      ? "Generate Diagnostic Report"
+                      : `Advance to ${STAGES[currentStageIndex + 1]?.label || "Next Part"} →`}
                   </span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
@@ -836,7 +836,7 @@ export default function Home() {
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
                   >
-                    EXAM MATERIALS
+                    Exam Materials
                   </button>
                   <button
                     type="button"
@@ -847,7 +847,7 @@ export default function Home() {
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
                   >
-                    <span>TRANSCRIPT LOG</span>
+                    <span>Transcript</span>
                     {transcript.length > 0 && (
                       <span className="text-[10px] px-1.5 py-0.2 bg-zinc-700 text-white font-mono">
                         {transcript.length}
@@ -897,27 +897,27 @@ export default function Home() {
               <Sparkles className="w-7 h-7 text-amber-500" />
             </div>
             <div className="space-y-2">
-              <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
-                [ AUTHENTIC HOT SEAT COMPLETE • UPGRADE PIPELINE ]
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
+                Hot Seat Complete • Preparing Upgrades
               </div>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-zinc-900 dark:text-zinc-100">
                 Evaluating Spoken Turns & Elevating Master Script
               </h2>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed max-w-sm mx-auto">
-                Comparing today&apos;s interview with your previous sessions, calculating fluency delta, and structuring your personal Band 8.5 Master Script...
+                Comparing today&apos;s interview with previous sessions, calculating fluency delta, and structuring your personal Master Script...
               </p>
             </div>
 
             <div className="w-full p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-left space-y-2 text-[11px]">
               <div className="flex items-center justify-between text-[10px] text-zinc-500 uppercase font-mono">
-                <span>EVALUATION & TRANSFORMATION PIPELINE:</span>
+                <span>Evaluation & Upgrade Pipeline:</span>
                 <span className="animate-spin text-amber-500">◒</span>
               </div>
               <ul className="space-y-1 text-zinc-600 dark:text-zinc-400 font-mono">
                 <li>✓ Objectively grading recorded speech against IELTS descriptors</li>
                 <li>✓ Calculating day-over-day cadence WPM and fluency improvements</li>
                 <li>✓ Preserving your authentic personal facts & opinions</li>
-                <li>✓ Structuring Band 8.5 cleft sentences & concessive clauses</li>
+                <li>✓ Structuring advanced sentence variety & natural rhythm</li>
                 <li>✓ Locking upgraded answers into Master Vault for daily repetition</li>
               </ul>
             </div>
