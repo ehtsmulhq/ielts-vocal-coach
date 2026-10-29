@@ -2,7 +2,18 @@
 
 import { useState, useEffect } from "react";
 import type { Lesson, Stage } from "@/lib/types";
-import { Volume2, Eye, Activity, Play, Pause, Award, BookOpen, Sliders, Zap } from "lucide-react";
+import {
+  Volume2,
+  Eye,
+  Activity,
+  Play,
+  Pause,
+  Award,
+  BookOpen,
+  Sliders,
+  Zap,
+  Flame,
+} from "lucide-react";
 
 interface LessonCardProps {
   lesson: Lesson;
@@ -24,10 +35,14 @@ export function LessonCard({
   // Stage 1 active drill tab
   const [activeDrillIndex, setActiveDrillIndex] = useState(0);
 
-  // Stage 2 (Long Reading) states
-  const [showBreathMarks, setShowBreathMarks] = useState(false);
+  // Stage 2 (Story Shadowing / Long Reading) states
+  const [showBreathMarks, setShowBreathMarks] = useState(true);
   const [readingSeconds, setReadingSeconds] = useState(0);
   const [activeWordTipIndex, setActiveWordTipIndex] = useState<number | null>(null);
+
+  // Stage 3 (Reflex Sprint) states
+  const [activeSprintIndex, setActiveSprintIndex] = useState(0);
+  const [sprintCountdown, setSprintCountdown] = useState<number | null>(null);
 
   // Stage 4 active IELTS part
   const [activeExamPart, setActiveExamPart] = useState<"part1" | "part2" | "part3">("part1");
@@ -46,6 +61,20 @@ export function LessonCard({
     }
     return () => clearInterval(interval);
   }, [currentStage]);
+
+  // Sprint 1.5s reflex simulator countdown
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (sprintCountdown !== null && sprintCountdown > 0) {
+      timer = setTimeout(() => {
+        setSprintCountdown((prev) => {
+          if (prev === null || prev <= 0.1) return 0;
+          return Number((prev - 0.1).toFixed(1));
+        });
+      }, 100);
+    }
+    return () => clearTimeout(timer);
+  }, [sprintCountdown]);
 
   // Part 2 Prep timer
   useEffect(() => {
@@ -90,7 +119,8 @@ export function LessonCard({
   const currentDrill =
     lesson.vocalWorkout.motorDrills[activeDrillIndex] || lesson.vocalWorkout.motorDrills[0];
   const longReading = lesson.vocalWorkout.longReading;
-  const currentSpeed = lesson.vocalWorkout.speedDrills[0];
+  const currentSpeed =
+    lesson.vocalWorkout.speedDrills[activeSprintIndex] || lesson.vocalWorkout.speedDrills[0];
 
   // Real-time WPM calculation
   const calculatedWpm =
@@ -100,19 +130,24 @@ export function LessonCard({
 
   const words = longReading.fullText.split(/\s+/);
 
+  const startReflexTimer = () => {
+    setSprintCountdown(1.5);
+  };
+
   return (
     <div className="h-full flex flex-col justify-between overflow-y-auto pr-1 scrollbar-thin select-none font-sans space-y-4">
       {/* ============================================================== */}
-      {/* STAGE 1: MOTOR DRILLS (Jaw & Lip Articulation) */}
+      {/* STAGE 1: OPENER PRIMING CHUNKS (Formulaic Chunk Reflexes) */}
       {/* ============================================================== */}
       {currentStage === "motor_warmup" && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in">
           <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
             <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 font-bold flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5 text-zinc-400" />
-              SECTION I: MOTOR ARTICULATION DRILLS
+              STAGE 1: OPENER PRIMING CHUNKS
             </span>
 
+            {/* Chunk selector tabs */}
             <div className="flex items-center gap-1">
               {lesson.vocalWorkout.motorDrills.map((d, idx) => (
                 <button
@@ -125,86 +160,107 @@ export function LessonCard({
                       : "border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400"
                   }`}
                 >
-                  {d.soundSymbol}
+                  CHUNK 0{idx + 1}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Active Drill Details */}
-          <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2">
+          {/* Active Formulaic Chunk Spotlight */}
+          <div className="p-4 sm:p-5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-serif font-bold text-zinc-900 dark:text-zinc-100">
-                {currentDrill.soundSymbol}
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300">
+                {currentDrill.category?.toUpperCase() || "CORE"} DOMAIN
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-                {currentDrill.soundName}
-              </span>
-            </div>
 
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
-              <strong>Phonetic Placement Tip:</strong> {currentDrill.physicalTip}
-            </p>
-          </div>
-
-          {/* Target Practice Words */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-              <span>Target Phonetic Placement Words</span>
               {onSpeakText && (
                 <button
                   type="button"
-                  onClick={() => onSpeakText(currentDrill.practiceWords.join(", "), 0.9)}
-                  className="hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1 cursor-pointer transition-colors"
+                  onClick={() => onSpeakText(currentDrill.chunkPhrase, 0.9)}
+                  className="hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1 cursor-pointer transition-colors font-mono text-[10px] text-zinc-600 dark:text-zinc-400"
                 >
-                  <Volume2 className="w-3 h-3" />
-                  <span>[ AUDIO DEMONSTRATION ]</span>
+                  <Volume2 className="w-3.5 h-3.5" />
+                  <span>[ HEAR CHUNK ]</span>
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {currentDrill.practiceWords.map((word, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 font-serif text-xs font-semibold bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100"
-                >
-                  {word}
+
+            <div className="text-xl sm:text-2xl font-serif font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+              “{currentDrill.chunkPhrase}”
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800 text-xs">
+              <div>
+                <span className="font-mono text-[10px] uppercase text-zinc-400 block">
+                  PHONETIC FOCUS:
                 </span>
-              ))}
+                <span className="text-zinc-700 dark:text-zinc-300 font-sans leading-snug">
+                  {currentDrill.phoneticFocus || currentDrill.physicalTip}
+                </span>
+              </div>
+              <div>
+                <span className="font-mono text-[10px] uppercase text-zinc-400 block">
+                  USAGE CONTEXT:
+                </span>
+                <span className="text-zinc-700 dark:text-zinc-300 font-sans leading-snug">
+                  {currentDrill.usageContext || "IELTS Part 1 & Part 2 Immediate Opener"}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Alliterative Sentence */}
+          {/* Full Candidate Personal Monologue Model */}
           <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-2">
             <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-              <span>Articulation Challenge Sentence</span>
+              <span>Personalized Band 8+ In-Context Model</span>
               {onSpeakText && (
                 <button
                   type="button"
-                  onClick={() => onSpeakText(currentDrill.challengeSentence, 0.9)}
+                  onClick={() =>
+                    onSpeakText(currentDrill.sampleSentence || currentDrill.challengeSentence || "", 0.95)
+                  }
                   className="hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1 cursor-pointer transition-colors"
                 >
                   <Volume2 className="w-3 h-3" />
-                  <span>[ HEAR MODEL ]</span>
+                  <span>[ HEAR FULL SENTENCE ]</span>
                 </button>
               )}
             </div>
             <p className="text-base sm:text-lg font-serif italic text-zinc-900 dark:text-zinc-100 leading-relaxed">
-              “{currentDrill.challengeSentence}”
+              “{currentDrill.sampleSentence || currentDrill.challengeSentence}”
             </p>
           </div>
+
+          {/* Articulation Practice Checklist */}
+          {currentDrill.practiceWords && currentDrill.practiceWords.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                Connected Speech Articulation Words
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {currentDrill.practiceWords.map((word, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-1 font-serif text-xs bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200"
+                  >
+                    {word}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* ============================================================== */}
-      {/* STAGE 2: LONG PARAGRAPH READING (Stamina & Cadence Gym) */}
+      {/* STAGE 2: STORY SHADOWING & TARTEEL TELEPROMPTER */}
       {/* ============================================================== */}
       {currentStage === "long_reading" && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in">
           <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
             <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 font-bold flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5 text-zinc-400" />
-              SECTION II: ACADEMIC SIGHT-READING & WPM CADENCE
+              STAGE 2: STORY SHADOWING & CADENCE
             </span>
 
             <span className="font-mono text-[10px] border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 text-zinc-600 dark:text-zinc-400">
@@ -213,7 +269,7 @@ export function LessonCard({
           </div>
 
           {/* Reading Metrics Bar */}
-          <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
+          <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-4 font-mono text-xs">
               <div className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                 <span>TIME:</span>
@@ -238,7 +294,7 @@ export function LessonCard({
                   <button
                     type="button"
                     onClick={onStopSpeech}
-                    className="px-2.5 py-1 border border-rose-600 bg-rose-50 text-rose-700 font-mono text-[10px] uppercase font-bold"
+                    className="px-2.5 py-1 border border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-mono text-[10px] uppercase font-bold cursor-pointer"
                   >
                     STOP AUDIO
                   </button>
@@ -247,14 +303,14 @@ export function LessonCard({
                     <button
                       type="button"
                       onClick={() => onSpeakText(longReading.fullText, 0.85)}
-                      className="px-2.5 py-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 font-mono text-[10px] uppercase text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 cursor-pointer"
+                      className="px-2 py-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 font-mono text-[10px] uppercase text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 cursor-pointer"
                     >
                       MODEL 0.85X
                     </button>
                     <button
                       type="button"
-                      onClick={() => onSpeakText(longReading.fullText, 1.05)}
-                      className="px-2.5 py-1 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-mono text-[10px] uppercase font-bold cursor-pointer"
+                      onClick={() => onSpeakText(longReading.fullText, 1.0)}
+                      className="px-2 py-1 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-mono text-[10px] uppercase font-bold cursor-pointer"
                     >
                       MODEL 1.0X
                     </button>
@@ -278,13 +334,16 @@ export function LessonCard({
           </div>
 
           {/* Continuous Long Reading Teleprompter Card */}
-          <div className="p-6 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
-            <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500 pb-3 border-b border-zinc-200 dark:border-zinc-800">
-              <span className="font-serif font-bold text-zinc-900 dark:text-zinc-100">{longReading.title}</span>
-              <span>THEME: {longReading.theme}</span>
+          <div className="p-5 sm:p-6 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
+            <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500 pb-2 border-b border-zinc-200 dark:border-zinc-800">
+              <span className="font-serif font-bold text-zinc-900 dark:text-zinc-100">
+                {longReading.title}
+              </span>
+              <span>PERSONAL MONOLOGUE</span>
             </div>
 
-            <p className="text-lg leading-relaxed font-serif text-zinc-900 dark:text-zinc-100">
+            {/* Teleprompter Words */}
+            <p className="text-base sm:text-lg leading-relaxed font-serif text-zinc-900 dark:text-zinc-100">
               {words.map((w, idx) => {
                 const isSpoken = idx < studentWordCount;
                 const isCurrent = idx === studentWordCount;
@@ -307,16 +366,19 @@ export function LessonCard({
             </p>
 
             {/* Breath marks breakdown if toggled */}
-            {showBreathMarks && (
+            {showBreathMarks && longReading.thoughtChunks && (
               <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 space-y-2">
-                <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
-                  Rhythmic Phrasing & Natural Breath Units:
+                <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center justify-between">
+                  <span>Rhythmic Phrasing & Natural Breath Units (Tarteel Style):</span>
+                  <span className="text-[9px] text-zinc-400">PAUSE AT &apos;|&apos;</span>
                 </div>
-                <div className="space-y-1 font-serif text-xs leading-relaxed text-zinc-800 dark:text-zinc-200">
+                <div className="space-y-1.5 font-serif text-xs leading-relaxed text-zinc-800 dark:text-zinc-200">
                   {longReading.thoughtChunks.map((chunk, idx) => (
                     <div key={idx} className="flex items-start gap-2">
-                      <span className="font-mono text-zinc-500">[{idx + 1}]</span>
-                      <span>{chunk}</span>
+                      <span className="font-mono text-zinc-400 text-[10px]">[{idx + 1}]</span>
+                      <span className="font-medium">
+                        {chunk.endsWith("|") ? chunk : `${chunk} |`}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -327,7 +389,7 @@ export function LessonCard({
           {/* Key Difficult Vocabulary Cards */}
           <div className="space-y-2">
             <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-              <span>High-Density Articulation Phonemes</span>
+              <span>Band 8+ Collocations & Articulation Phonemes</span>
               <span>Tap for Phonetic Tip</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -345,14 +407,16 @@ export function LessonCard({
                     }`}
                   >
                     <div className="font-serif font-bold text-xs truncate">{item.word}</div>
-                    <div className="text-[10px] font-mono opacity-70 truncate mt-0.5">{item.phonetic}</div>
+                    <div className="text-[10px] font-mono opacity-70 truncate mt-0.5">
+                      {item.phonetic}
+                    </div>
                   </button>
                 );
               })}
             </div>
 
             {activeWordTipIndex !== null && longReading.keyDifficultWords[activeWordTipIndex] && (
-              <div className="p-3 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-sans text-xs space-y-1">
+              <div className="p-3 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-sans text-xs space-y-1 animate-in fade-in">
                 <div className="font-mono text-[10px] uppercase font-bold">
                   {longReading.keyDifficultWords[activeWordTipIndex].word} •{" "}
                   {longReading.keyDifficultWords[activeWordTipIndex].phonetic}
@@ -367,60 +431,153 @@ export function LessonCard({
       )}
 
       {/* ============================================================== */}
-      {/* STAGE 3: SPEED & TONGUE TWISTERS (Motor Muscle Reflexes) */}
+      {/* STAGE 3: 1.5S ZERO-HESITATION REFLEX SPRINT (AER Method) */}
       {/* ============================================================== */}
       {currentStage === "speed_drill" && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in">
           <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
             <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 font-bold flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-zinc-400" />
-              SECTION III: SPEECH REFLEX VELOCITY DRILLS
+              STAGE 3: 1.5S ZERO-HESITATION REFLEX SPRINT
             </span>
-            <span className="font-mono text-[10px] border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 text-zinc-500">
-              AGILITY & REPETITION
-            </span>
+
+            {/* Sprint tabs */}
+            <div className="flex items-center gap-1">
+              {lesson.vocalWorkout.speedDrills.map((s, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveSprintIndex(idx)}
+                  className={`px-2 py-0.5 font-mono text-[10px] uppercase border transition-all cursor-pointer ${
+                    activeSprintIndex === idx
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
+                      : "border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400"
+                  }`}
+                >
+                  SPRINT 0{idx + 1}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="p-6 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-center space-y-3">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
-              {currentSpeed.title} • TARGET: {currentSpeed.targetSound}
+          {/* Reflex Question Spotlight */}
+          <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
+            <div className="flex items-center justify-between font-mono text-[10px] uppercase text-zinc-500">
+              <span className="font-bold">{currentSpeed.title}</span>
+              <span className="text-zinc-400">CHRIS PELL DIRECT ANSWER METHOD</span>
             </div>
 
-            <p className="text-xl sm:text-2xl font-serif font-bold text-zinc-900 dark:text-zinc-100 leading-relaxed px-2">
-              “{currentSpeed.twister}”
-            </p>
+            <div className="text-lg sm:text-xl font-serif font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
+              “{currentSpeed.questionPrompt}”
+            </div>
 
-            <div className="inline-block px-3 py-1 font-mono text-[10px] uppercase border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400">
-              GOAL: {currentSpeed.goalPace}
-            </div>
-          </div>
+            {/* 1.5s Reflex Countdown Trigger */}
+            <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4 text-zinc-500" />
+                <span className="font-mono text-xs text-zinc-700 dark:text-zinc-300">
+                  Target: Speak Anchor within <strong>1.5 seconds</strong>
+                </span>
+              </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-1 text-center font-mono text-[10px]">
-            <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-              <div className="text-zinc-400 uppercase">REP 01</div>
-              <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">SLOW EXAGGERATED</div>
+              <div className="flex items-center gap-3">
+                {sprintCountdown !== null && (
+                  <span
+                    className={`font-mono text-xs font-bold px-2 py-0.5 border ${
+                      sprintCountdown === 0
+                        ? "bg-emerald-900 text-emerald-100 border-emerald-700"
+                        : "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900"
+                    }`}
+                  >
+                    {sprintCountdown > 0 ? `${sprintCountdown}s` : "TIME UP!"}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={startReflexTimer}
+                  className="px-2.5 py-1 text-[10px] font-mono uppercase bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-bold border border-zinc-900 cursor-pointer"
+                >
+                  [ TEST 1.5S REFLEX ]
+                </button>
+              </div>
             </div>
-            <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-              <div className="text-zinc-400 uppercase">REP 02</div>
-              <div className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">NATURAL RHYTHM</div>
+
+            {/* Starter Impulse Chunk */}
+            <div className="space-y-1">
+              <span className="font-mono text-[10px] uppercase text-zinc-400 block font-bold">
+                1.5s Zero-Hesitation Starter Impulse:
+              </span>
+              <div className="p-2.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 font-serif text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                “{currentSpeed.starterChunk}”
+              </div>
             </div>
-            <div className="p-3 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
-              <div className="opacity-80 uppercase">REP 03</div>
-              <div className="font-bold mt-0.5">MAXIMUM VELOCITY</div>
+
+            {/* AER Scaffolding Breakdown */}
+            <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+              <div className="font-mono text-[10px] uppercase text-zinc-500 font-bold">
+                AER Structural Scaffolding
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 text-xs">
+                {/* [A] Anchor */}
+                <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-start gap-2.5">
+                  <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-bold">
+                    [A] ANCHOR
+                  </span>
+                  <div className="space-y-0.5">
+                    <p className="font-serif text-zinc-900 dark:text-zinc-100 font-semibold">
+                      {currentSpeed.aerScaffolding?.anchor}
+                    </p>
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      (1 breath unit • Direct factual answer • Zero filler words)
+                    </span>
+                  </div>
+                </div>
+
+                {/* [E] Elaborate / Reason */}
+                <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-start gap-2.5">
+                  <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 border border-zinc-400 text-zinc-700 dark:text-zinc-300 font-bold">
+                    [E] REASON
+                  </span>
+                  <div className="space-y-0.5">
+                    <p className="font-serif text-zinc-800 dark:text-zinc-200">
+                      {currentSpeed.aerScaffolding?.reason}
+                    </p>
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      (2 breath units • Connective elaboration • Why / Contrast)
+                    </span>
+                  </div>
+                </div>
+
+                {/* [R] Reflect / Detail */}
+                <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-start gap-2.5">
+                  <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 border border-zinc-400 text-zinc-700 dark:text-zinc-300 font-bold">
+                    [R] DETAIL
+                  </span>
+                  <div className="space-y-0.5">
+                    <p className="font-serif text-zinc-800 dark:text-zinc-200">
+                      {currentSpeed.aerScaffolding?.detail}
+                    </p>
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      (1 breath unit • Concrete personal nuance)
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* ============================================================== */}
-      {/* STAGE 4: IELTS SPEAKING EXAM (Secondary Application) */}
+      {/* STAGE 4: IELTS SPEAKING EXAM (Full Cambridge Simulation) */}
       {/* ============================================================== */}
       {currentStage === "ielts_test" && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in">
           <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
             <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 font-bold flex items-center gap-1.5">
               <Award className="w-3.5 h-3.5 text-zinc-400" />
-              SECTION IV: IELTS SPEAKING EXAM EVALUATION
+              STAGE 4: CAMBRIDGE IELTS EXAM SIMULATION
             </span>
 
             <div className="flex items-center gap-1 font-mono text-[10px]">
@@ -501,27 +658,39 @@ export function LessonCard({
                 <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
                   <div>
                     <div className="text-[10px] text-zinc-400 uppercase">PREP TIMER (1M)</div>
-                    <div className="text-base font-bold text-zinc-900 dark:text-zinc-100">{formatTime(prepSeconds)}</div>
+                    <div className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      {formatTime(prepSeconds)}
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsPrepRunning(!isPrepRunning)}
                     className="p-1.5 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
                   >
-                    {isPrepRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    {isPrepRunning ? (
+                      <Pause className="w-3.5 h-3.5" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
                 <div className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
                   <div>
                     <div className="text-[10px] text-zinc-400 uppercase">TALK TIMER (2M)</div>
-                    <div className="text-base font-bold text-zinc-900 dark:text-zinc-100">{formatTime(speakSeconds)}</div>
+                    <div className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      {formatTime(speakSeconds)}
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsSpeakRunning(!isSpeakRunning)}
                     className="p-1.5 border border-zinc-200 dark:border-zinc-800 cursor-pointer"
                   >
-                    {isSpeakRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    {isSpeakRunning ? (
+                      <Pause className="w-3.5 h-3.5" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
               </div>

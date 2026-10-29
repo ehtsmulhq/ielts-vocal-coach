@@ -1,8 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import type { Lesson, Stage, TargetBand, TranscriptEntry, Feedback, NetworkTelemetry } from "@/lib/types";
+import { useState, useRef, useEffect, useSyncExternalStore } from "react";
+import type {
+  Lesson,
+  Stage,
+  TargetBand,
+  TranscriptEntry,
+  Feedback,
+  NetworkTelemetry,
+} from "@/lib/types";
 import { STAGES } from "@/lib/types";
+import {
+  subscribeProfile,
+  getProfileSnapshot,
+  getProfileServerSnapshot,
+  saveProfile,
+} from "@/lib/profile";
 import { LIVE_MODEL } from "@/lib/models";
 import { examinerInstruction, STAGE_CUES } from "@/lib/prompts";
 import { LiveSession, type LiveStatus, type MicMode } from "@/lib/live-session";
@@ -25,6 +38,11 @@ export default function Home() {
   const [view, setView] = useState<"setup" | "session" | "feedback">("setup");
   const [band, setBand] = useState<TargetBand>("6.5");
   const [activeModel, setActiveModel] = useState<string>(LIVE_MODEL);
+  const profile = useSyncExternalStore(
+    subscribeProfile,
+    getProfileSnapshot,
+    getProfileServerSnapshot
+  );
 
   // Lesson generation
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -105,7 +123,7 @@ export default function Home() {
     chosenBand: TargetBand,
     topic?: string,
     liveModelId?: string,
-    focusArea?: "full" | "consonants" | "reading" | "speed",
+    focusArea?: "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed",
     voiceId?: string
   ) => {
     setIsLoading(true);
@@ -116,11 +134,11 @@ export default function Home() {
 
     try {
       // Step 1: Generate dynamic vocal workout curriculum
-      setLoadingStep("Curating customized Long Reading & Vocal Gym drills...");
+      setLoadingStep("Curating personalized Vocal Priming & Story Shadowing drills...");
       const lessonRes = await fetch("/api/lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ band: chosenBand, topic, focusArea }),
+        body: JSON.stringify({ band: chosenBand, topic, focusArea, profile }),
       });
       if (!lessonRes.ok) {
         const err = await lessonRes.json().catch(() => ({}));
@@ -207,7 +225,7 @@ export default function Home() {
         token,
         model,
         voice,
-        systemInstruction: examinerInstruction(generatedLesson),
+        systemInstruction: examinerInstruction(generatedLesson, profile),
       });
 
       // Link analysers for VoiceOrb
@@ -458,6 +476,10 @@ export default function Home() {
               onStart={handleStartSession}
               isLoading={isLoading}
               loadingStep={loadingStep}
+              profile={profile}
+              onProfileChange={(updatedProfile) => {
+                saveProfile(updatedProfile);
+              }}
             />
           </div>
         )}
