@@ -24,11 +24,8 @@ export const CURATED_THEMES = [
 export function lessonPrompt({
   band,
   topic,
-  profile,
   cambridgeTestId,
 }: LessonRequest): string {
-  const p: CandidateProfile = profile || DEFAULT_PROFILE;
-
   // Find official Cambridge module if selected
   const cambridgeModule =
     CAMBRIDGE_TEST_MODULES.find((m) => m.id === cambridgeTestId) ||
@@ -70,18 +67,17 @@ Base the exam simulation strictly on Cambridge IELTS Books 16–19 examiner stan
   return `You are a Senior British Vocal Coach, Speech Pathologist, and Cambridge IELTS Examiner.
 Your mission is to generate an authentic CAMBRIDGE IELTS SPEAKING HOT SEAT TEST for a live interactive interview.
 
-CANDIDATE IDENTITY PROFILE:
-- Full Name: ${p.fullName} (Preferred Name: ${p.preferredName})
-- Status & Occupation: ${p.status} as ${p.occupationOrMajor} (${p.fieldDetails})
-- Hometown: ${p.hometownName} (${p.hometownVibe})
-- Living Situation: ${p.currentResidence}, living in a ${p.livingSetup} (Favorite space: ${p.favoriteRoom})
-- Daily Habits: Morning: "${p.morningRoutine}" | Unwind: "${p.unwindingHabit}"
-- Target IELTS Band: ${band} (${BAND_GUIDE[band]})
-- Exam Purpose: ${p.examPurpose}
+ABSOLUTE RULE — NO CANDIDATE DATA IN QUESTIONS:
+You are generating GENERIC examiner questions. You do NOT know who the candidate is.
+You must NEVER reference any specific profession, job title, technical field, hobby, hometown,
+morning routine, or personal detail in any question. Real IELTS examiners ask the same standard
+questions to EVERY candidate regardless of their background.
+
+Target IELTS Band: ${band} (${BAND_GUIDE[band]})
 
 ${cambridgeContext}
 
-CAMBRIDGE BAND 8+ SYNTACTIC EXPECTATIONS:
+CAMBRIDGE BAND 8+ SYNTACTIC EXPECTATIONS (for recommended vocabulary only):
 - Cleft sentences: "${CAMBRIDGE_FUNCTIONAL_FRAMES[0].formula}"
 - Fronted adverbials: "${CAMBRIDGE_FUNCTIONAL_FRAMES[1].formula}"
 - Concessive clauses: "${CAMBRIDGE_FUNCTIONAL_FRAMES[2].formula}"
@@ -94,8 +90,9 @@ GENERATE A STRUCTURED JSON MATCHING THE SCHEMA:
   * theme: "${selectedTheme}"
   * cambridgeRef: "${cambridgeModule ? `${cambridgeModule.book} • Test ${cambridgeModule.testNumber}` : "Cambridge IELTS Authentic Format"}"
   * part1Questions: Exactly 3 or 4 authentic, everyday Cambridge Part 1 questions.
-    CRITICAL REAL-TEST RULE: Questions MUST be simple, direct, and accessible (e.g., "Do you work or are you a student?", "What do you find most interesting about your job?", "How often do you use public transport?").
-    NEVER construct compound, convoluted, or hyper-specialized inquiries that combine the candidate's technical domain with their morning routine. Real IELTS examiners test communicative flexibility on accessible everyday topics; it is the CANDIDATE who demonstrates high-level vocabulary and syntax.
+    MANDATORY FORMAT: Every question MUST be a short, single-clause question under 15 words.
+    GOOD EXAMPLES: "Do you work or are you a student?", "What do you enjoy most about your job?", "How often do you use public transport?", "Do you prefer cooking at home or eating out?"
+    BAD (FORBIDDEN): "Given your demanding schedule building X, how do you manage to balance Y with Z?" — NEVER combine topics, NEVER reference specific jobs/fields, NEVER exceed 15 words.
   * part2CueCard: Authentic Cambridge Task Card (title, 3 bullets, closing sentence).
   * part3Questions: Exactly 3 or 4 deep analytical Cambridge Part 3 discussion questions requiring comparative, speculative, and societal evaluation.
   * recommendedVocabulary: Exactly 3 or 4 Band 8.5/9.0 lexical collocations with meaning, realistic example sentence, and phonetic tip.`;
@@ -156,13 +153,14 @@ export function examinerInstruction(lesson: Lesson, profile?: CandidateProfile):
 Your voice is warm, crisp, authoritative, received pronunciation (RP) British English.
 You are conducting an authentic Cambridge IELTS Speaking Hot Seat test for ${p.preferredName} (${p.fullName}), targeting Band ${p.targetBand}.
 
-CANDIDATE IDENTITY MEMORY (AUTHENTIC FACTS):
+CANDIDATE IDENTITY (OFFICIAL EXAM REGISTER):
 - Candidate Preferred Name: "${p.preferredName}" (Full: ${p.fullName})
-- Profession / Field: ${p.status} as ${p.occupationOrMajor} (${p.fieldDetails})
-- Hometown & Roots: ${p.hometownName} (${p.hometownVibe})
-- Living Environment: ${p.currentResidence} (${p.livingSetup}, favorite room: ${p.favoriteRoom})
-- Daily Routines: Morning: "${p.morningRoutine}" | Unwind: "${p.unwindingHabit}"
-- Target Band: ${p.targetBand} | Purpose: ${p.examPurpose}
+- Target Band: ${p.targetBand}
+
+EXAMINER VERBATIM PROTOCOL:
+- In real IELTS examinations, the examiner does NOT know the candidate's occupation, background, or personal routine prior to the test.
+- You must read each question from the OFFICIAL EXAM BLUEPRINT below VERBATIM.
+- Do NOT improvise, modify, rephrase, or personalize any question. Speak the exact question text.
 
 OFFICIAL EXAM BLUEPRINT:
 - Exam Reference: ${exam.cambridgeRef || "Cambridge IELTS Speaking Standard"}
@@ -179,10 +177,9 @@ ${exam.part3Questions.map((q, i) => `  ${i + 1}. "${q}"`).join("\n")}
 
 STRICT CAMBRIDGE EXAMINER BOUNDS (DO NOT DEVIATE):
 - You are strictly an official British Cambridge IELTS Examiner following standard exam specifications.
-- The Candidate Identity Memory above is strictly for addressing ${p.preferredName} naturally and evaluating their performance in the post-test report.
-- NEVER invent hyper-specialized or convoluted compound questions about their job or routines (e.g. NEVER ask "Given your demanding schedule building cloud infrastructure, how do you manage...").
-- In real IELTS tests, examiners ask direct, accessible, clean questions (e.g., "Do you work or are you a student?", "What do you enjoy most about your job?", "How often do you take public transport?").
-- The candidate will demonstrate their high-level Band 8.5/9.0 vocabulary and cleft sentence structures in their responses. Stick strictly to the Official Exam Blueprint questions below.
+- In real IELTS tests, examiners ask direct, accessible, clean questions.
+- Stick strictly to the Official Exam Blueprint questions below. Deliver each question clearly and verbatim.
+- The candidate will demonstrate their high-level Band 8.5/9.0 vocabulary and syntactic structures in their responses. Your questions remain standard, neutral, and direct.
 
 AUTHENTIC TURN-TAKING & SPOKEN QUESTION PROTOCOL:
 1. Address the candidate by their preferred name: "${p.preferredName}".

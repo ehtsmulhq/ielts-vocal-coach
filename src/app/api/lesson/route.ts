@@ -1,6 +1,6 @@
 import { generateJson } from "@/lib/gemini";
 import { lessonPrompt, lessonSchema } from "@/lib/prompts";
-import type { CandidateProfile, Lesson, LessonRequest, TargetBand } from "@/lib/types";
+import type { Lesson, LessonRequest, TargetBand } from "@/lib/types";
 import {
   MOST_ASKED_PART2_SCENES,
   REAL_PART1_CLUSTERS,
@@ -10,13 +10,38 @@ import { CAMBRIDGE_TEST_MODULES } from "@/lib/cambridge-materials";
 
 const BANDS: TargetBand[] = ["5.5", "6.5", "7.5"];
 
+function sanitizePart1Questions(questions: string[]): string[] {
+  const fallback = REAL_PART1_CLUSTERS[0].standardQuestions;
+  const forbiddenKeywords = [
+    "given your",
+    "demanding schedule",
+    "balance your",
+    "commitments",
+    "infrastructure",
+    "microservices",
+    "distributed",
+    "engineering",
+    "training with your",
+    "professional commitments",
+  ];
+
+  return questions.map((q, idx) => {
+    const wordCount = q.trim().split(/\s+/).length;
+    const lower = q.toLowerCase();
+    const hasForbidden = forbiddenKeywords.some((kw) => lower.includes(kw));
+    if (wordCount > 16 || hasForbidden) {
+      return fallback[idx % fallback.length];
+    }
+    return q;
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => ({}))) as Partial<LessonRequest>;
     const band = BANDS.includes(body.band as TargetBand) ? (body.band as TargetBand) : "7.5";
     const topic = typeof body.topic === "string" ? body.topic.trim().slice(0, 120) : undefined;
     const focusArea = body.focusArea;
-    const profile = body.profile as CandidateProfile | undefined;
     const cambridgeTestId = typeof body.cambridgeTestId === "string" ? body.cambridgeTestId : undefined;
     const sceneId = typeof body.sceneId === "string" ? body.sceneId : undefined;
 
@@ -105,9 +130,12 @@ export async function POST(request: Request) {
     // 4. Default: Generate via Gemini strictly bound to Cambridge IELTS rules
     try {
       const { data, model } = await generateJson<Lesson>(
-        lessonPrompt({ band, topic, focusArea, profile, cambridgeTestId }),
+        lessonPrompt({ band, topic, focusArea, cambridgeTestId }),
         lessonSchema
       );
+      if (data?.hotSeatTest?.part1Questions && Array.isArray(data.hotSeatTest.part1Questions)) {
+        data.hotSeatTest.part1Questions = sanitizePart1Questions(data.hotSeatTest.part1Questions);
+      }
       return Response.json({ lesson: data, model });
     } catch {
       // Fallback: Return top real-world YouTube mock scene from Knowledge Graph
