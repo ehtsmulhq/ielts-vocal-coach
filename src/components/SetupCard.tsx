@@ -21,10 +21,11 @@ import {
   RotateCcw,
   Sparkles,
   BookOpen,
+  Flame,
 } from "lucide-react";
 
 interface SetupCardProps {
-  onStart: (
+  onStartHotSeat: (
     band: TargetBand,
     topic?: string,
     liveModel?: string,
@@ -32,6 +33,9 @@ interface SetupCardProps {
     voice?: string,
     cambridgeTestId?: string
   ) => Promise<void>;
+  onEnterMirrorGym: () => void;
+  hasMasterScript: boolean;
+  masterPracticeCount: number;
   isLoading: boolean;
   loadingStep: string;
   profile: CandidateProfile;
@@ -39,7 +43,10 @@ interface SetupCardProps {
 }
 
 export function SetupCard({
-  onStart,
+  onStartHotSeat,
+  onEnterMirrorGym,
+  hasMasterScript,
+  masterPracticeCount,
   isLoading,
   loadingStep,
   profile,
@@ -85,7 +92,7 @@ export function SetupCard({
       id: "full",
       code: "PROTOCOL 01",
       title: "Comprehensive Mastery",
-      desc: "Opener Chunks → Personal Story Shadowing → 1.5s Reflex Sprint → Cambridge Exam",
+      desc: "Work, Hometown, Living, Daily Habits & Part 2 Cue Card Monologue",
       badge: "Full Protocol",
     },
     {
@@ -132,7 +139,7 @@ export function SetupCard({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
-    onStart(
+    onStartHotSeat(
       band,
       customTopic.trim() || undefined,
       selectedModel,
@@ -148,17 +155,46 @@ export function SetupCard({
       <div className="space-y-2 border-b border-zinc-200 dark:border-zinc-800 pb-5">
         <div className="flex items-center justify-between text-[10px] font-mono tracking-widest text-zinc-500 uppercase">
           <span>[ VOCAL LABORATORY CONFIGURATION ]</span>
-          <span>REF: CAMBRIDGE-IELTS-ACADEMIC</span>
+          <span>REF: ACOUSTIC-APPRENTICESHIP-V5</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-serif tracking-tight text-zinc-900 dark:text-zinc-50">
           English Phonetics & Vocal Laboratory
         </h1>
         <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
-          Cambridge Books 11–19 Official Test Materials, Candidate Profile Memory & Zero-Hesitation Reflex Sprints.
+          Master Script Vault, Native Exemplar Mirroring & High-Repetition Vocal Muscle Memory.
         </p>
 
+        {/* Master Script Vault Hero Card */}
+        <div className="pt-2">
+          <div className="p-4 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="space-y-0.5">
+              <div className="font-mono text-[10px] uppercase font-bold tracking-wider flex items-center gap-1.5 opacity-80">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>MASTER SCRIPT VAULT (NO RANDOM REPETITION)</span>
+              </div>
+              <p className="font-serif text-sm font-bold">
+                {hasMasterScript
+                  ? `Personal Band 8.5 Script Loaded • Practiced ${masterPracticeCount} Times`
+                  : "Canonical Profile Script Ready for Daily Mirroring"}
+              </p>
+              <p className="text-[11px] opacity-80 font-sans">
+                Repeat the exact same answers over and over until vocal muscle automaticity is locked.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onEnterMirrorGym}
+              className="px-4 py-2.5 bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 font-mono font-bold text-xs uppercase tracking-wider border border-white dark:border-zinc-900 cursor-pointer hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-1.5"
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-500" />
+              <span>[ ENTER DAILY MIRROR GYM ]</span>
+            </button>
+          </div>
+        </div>
+
         {/* Candidate Profile Pill Banner */}
-        <div className="pt-2 flex flex-wrap items-center justify-between gap-2 bg-zinc-50 dark:bg-zinc-900/60 p-3 border border-zinc-200 dark:border-zinc-800">
+        <div className="pt-1 flex flex-wrap items-center justify-between gap-2 bg-zinc-50 dark:bg-zinc-900/60 p-3 border border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 flex items-center justify-center text-zinc-800 dark:text-zinc-200">
               <User className="w-3.5 h-3.5" />
@@ -244,7 +280,7 @@ export function SetupCard({
           <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
             <span className="flex items-center gap-1.5 font-bold">
               <BookOpen className="w-3.5 h-3.5 text-zinc-500" />
-              II. Official Cambridge IELTS Materials (Books 16–19)
+              II. Official Cambridge IELTS Blueprint (Books 16–19)
             </span>
             <span className="text-[10px] text-zinc-400">Authentic Test Bank</span>
           </div>
@@ -290,38 +326,6 @@ export function SetupCard({
             placeholder={`e.g. Cambridge 19: AI & Automation, ${profile.occupationOrMajor} Architecture, Morning Rhythms...`}
             className="w-full text-xs font-mono px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors"
           />
-
-          {/* Quick preset chips */}
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {[
-              "Cambridge 19: AI & Workplace Automation",
-              "Cambridge 19: Urban Spaces & Architecture",
-              "Cambridge 18: Environmental Solutions",
-              "Cambridge 18: Health & Nutrition",
-              `${profile.occupationOrMajor} Trajectory`,
-              `${profile.hometownName} Roots & Heritage`,
-            ].map((theme) => (
-              <button
-                key={theme}
-                type="button"
-                onClick={() => {
-                  setCustomTopic(theme);
-                  const found = CAMBRIDGE_TEST_MODULES.find((m) =>
-                    theme.toLowerCase().includes(m.book.toLowerCase()) &&
-                    theme.includes(String(m.testNumber))
-                  );
-                  if (found) setSelectedCambridgeId(found.id);
-                }}
-                className={`text-[10px] font-mono px-2.5 py-1 border transition-all cursor-pointer ${
-                  customTopic === theme
-                    ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100"
-                    : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700"
-                }`}
-              >
-                {theme}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Target Level */}
@@ -403,11 +407,11 @@ export function SetupCard({
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
-              <span>{loadingStep || "SYNTHESIZING CAMBRIDGE PROTOCOL..."}</span>
+              <span>{loadingStep || "INITIALIZING AUTHENTIC HOT SEAT..."}</span>
             </>
           ) : (
             <>
-              <span>[ INITIALIZE CAMBRIDGE ACOUSTIC PROTOCOL ]</span>
+              <span>[ RECORD AUTHENTIC HOT SEAT (TAKE 1 BASELINE) ]</span>
               <ArrowRight className="w-4 h-4" />
             </>
           )}

@@ -1,15 +1,21 @@
 "use client";
 
 import type { Feedback } from "@/lib/types";
-import { RotateCcw, Activity, MicOff, Terminal } from "lucide-react";
+import { RotateCcw, Activity, MicOff, Terminal, Sparkles } from "lucide-react";
 
 interface FeedbackReportProps {
   feedback: Feedback | null;
   noSpeechDetected?: boolean;
   onRestart: () => void;
+  onEnterMirrorGym?: () => void;
 }
 
-export function FeedbackReport({ feedback, noSpeechDetected, onRestart }: FeedbackReportProps) {
+export function FeedbackReport({
+  feedback,
+  noSpeechDetected,
+  onRestart,
+  onEnterMirrorGym,
+}: FeedbackReportProps) {
   if (noSpeechDetected || !feedback) {
     return (
       <div className="w-full max-w-xl mx-auto space-y-4 py-6 font-sans animate-in fade-in duration-300">
@@ -38,14 +44,26 @@ export function FeedbackReport({ feedback, noSpeechDetected, onRestart }: Feedba
             </ul>
           </div>
 
-          <button
-            type="button"
-            onClick={onRestart}
-            className="w-full py-3 px-6 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-900 dark:border-zinc-100"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>[ RE-INITIALIZE WORKOUT PROTOCOL ]</span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1">
+            {onEnterMirrorGym && (
+              <button
+                type="button"
+                onClick={onEnterMirrorGym}
+                className="w-full sm:w-auto py-3 px-4 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-900 dark:border-zinc-100"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>[ ENTER MASTER MIRROR GYM ]</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onRestart}
+              className="w-full sm:w-auto py-3 px-4 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-300 dark:border-zinc-700"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>[ RE-INITIALIZE WORKOUT PROTOCOL ]</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -210,15 +228,25 @@ export function FeedbackReport({ feedback, noSpeechDetected, onRestart }: Feedba
         </p>
       </div>
 
-      {/* Restart Button */}
-      <div className="flex justify-center pt-2">
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        {onEnterMirrorGym && (
+          <button
+            type="button"
+            onClick={onEnterMirrorGym}
+            className="w-full sm:w-auto px-6 py-3.5 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100 flex items-center justify-center gap-2 shadow-sm"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>[ ENTER MASTER MIRROR GYM (START DAILY REPETITION) → ]</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onRestart}
-          className="px-6 py-3 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100 flex items-center gap-2"
+          className="w-full sm:w-auto px-6 py-3.5 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-zinc-300 dark:border-zinc-700 flex items-center justify-center gap-2"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>[ INITIALIZE NEW WORKOUT PROTOCOL ]</span>
+          <span>[ NEW PROTOCOL ]</span>
         </button>
       </div>
     </div>

@@ -16,6 +16,13 @@ import {
   getProfileServerSnapshot,
   saveProfile,
 } from "@/lib/profile";
+import {
+  subscribeMasterScript,
+  getMasterScriptSnapshot,
+  getMasterScriptServerSnapshot,
+  saveMasterScript,
+  type MasterScriptRepository,
+} from "@/lib/master-script";
 import { LIVE_MODEL } from "@/lib/models";
 import { examinerInstruction, STAGE_CUES } from "@/lib/prompts";
 import { LiveSession, type LiveStatus, type MicMode } from "@/lib/live-session";
@@ -26,22 +33,29 @@ import { LessonCard } from "@/components/LessonCard";
 import { TranscriptFeed } from "@/components/TranscriptFeed";
 import { FeedbackReport } from "@/components/FeedbackReport";
 import { LatencyHUD } from "@/components/LatencyHUD";
+import { MasterMirrorGym } from "@/components/MasterMirrorGym";
 import {
   ArrowRight,
   AlertTriangle,
   RotateCcw,
   Dumbbell,
   Clock,
+  Sparkles,
 } from "lucide-react";
 
 export default function Home() {
-  const [view, setView] = useState<"setup" | "session" | "feedback">("setup");
+  const [view, setView] = useState<"setup" | "session" | "mirrorgym" | "upgrading" | "feedback">("setup");
   const [band, setBand] = useState<TargetBand>("6.5");
   const [activeModel, setActiveModel] = useState<string>(LIVE_MODEL);
   const profile = useSyncExternalStore(
     subscribeProfile,
     getProfileSnapshot,
     getProfileServerSnapshot
+  );
+  const masterScript = useSyncExternalStore(
+    subscribeMasterScript,
+    getMasterScriptSnapshot,
+    getMasterScriptServerSnapshot
   );
 
   // Lesson generation
@@ -315,7 +329,6 @@ export default function Home() {
     sessionRef.current?.stop();
     speechEngineRef.current?.cleanup();
     setLiveStatus("closed");
-    setView("feedback");
     setErrorMsg(null);
 
     // Verify if candidate spoke any words
@@ -328,40 +341,75 @@ export default function Home() {
     );
 
     if (totalStudentWords === 0) {
+      setView("feedback");
       setFeedback(null);
       setNoSpeechDetected(true);
       setIsGrading(false);
       return;
     }
 
+    // Candidate spoke! Enter upgrade pipeline
+    setView("upgrading");
     setNoSpeechDetected(false);
     setIsGrading(true);
 
     try {
       if (!lesson) throw new Error("No active lesson");
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lesson,
-          transcript,
-          band,
+
+      // Run feedback diagnostic scoring and Band 8.5 Master Script transformation in parallel
+      const [feedbackResult, upgradeResult] = await Promise.allSettled([
+        fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lesson,
+            transcript,
+            band,
+          }),
+        }).then(async (res) => {
+          if (!res.ok) throw new Error("Failed to grade transcript");
+          return res.json();
         }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to grade transcript");
+        fetch("/api/upgrade-script", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transcript,
+            profile,
+            targetBand: band,
+          }),
+        }).then(async (res) => {
+          if (!res.ok) throw new Error("Failed to upgrade master script");
+          return res.json();
+        }),
+      ]);
+
+      if (feedbackResult.status === "fulfilled" && feedbackResult.value) {
+        if (feedbackResult.value.noSpeech) {
+          setFeedback(null);
+          setNoSpeechDetected(true);
+        } else {
+          setFeedback(feedbackResult.value.feedback);
+        }
       }
-      const data = await res.json();
-      if (data.noSpeech) {
-        setFeedback(null);
-        setNoSpeechDetected(true);
-        return;
+
+      if (upgradeResult.status === "fulfilled" && upgradeResult.value?.items?.length) {
+        const updatedRepo: MasterScriptRepository = {
+          ...masterScript,
+          candidateName: profile.fullName,
+          preferredName: profile.preferredName,
+          targetBand: band,
+          lastPracticedAt: Date.now(),
+          items: upgradeResult.value.items,
+        };
+        saveMasterScript(updatedRepo);
       }
-      setFeedback(data.feedback);
+
+      setView("feedback");
     } catch (err) {
       console.error(err);
       setErrorMsg((err as Error).message);
+      setView("feedback");
     } finally {
       setIsGrading(false);
     }
@@ -422,6 +470,13 @@ export default function Home() {
               })}
             </div>
           )}
+
+          {view === "mirrorgym" && (
+            <div className="flex items-center gap-2 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="uppercase tracking-wider hidden sm:inline">ACOUSTIC APPRENTICESHIP GYM</span>
+            </div>
+          )}
         </div>
 
         {/* Right header telemetry controls */}
@@ -443,6 +498,17 @@ export default function Home() {
                 END & REPORT
               </button>
             </>
+          )}
+
+          {view === "mirrorgym" && (
+            <button
+              type="button"
+              onClick={() => setView("setup")}
+              className="flex items-center gap-1.5 px-3.5 py-1 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs uppercase font-bold transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>EXIT TO DASHBOARD</span>
+            </button>
           )}
 
           {view === "feedback" && (
@@ -474,7 +540,10 @@ export default function Home() {
         {view === "setup" && (
           <div className="h-full w-full overflow-y-auto flex flex-col items-center justify-start sm:justify-center p-2 sm:p-4">
             <SetupCard
-              onStart={handleStartSession}
+              onStartHotSeat={handleStartSession}
+              onEnterMirrorGym={() => setView("mirrorgym")}
+              hasMasterScript={masterScript.totalPracticeCount > 0 || masterScript.items.length > 0}
+              masterPracticeCount={masterScript.totalPracticeCount}
               isLoading={isLoading}
               loadingStep={loadingStep}
               profile={profile}
@@ -593,7 +662,59 @@ export default function Home() {
           </div>
         )}
 
-        {/* View 3: Diagnostic Feedback */}
+        {/* View 3: Master Script Upgrade Pipeline (Post-Hot Seat) */}
+        {view === "upgrading" && (
+          <div className="h-full w-full flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto font-mono space-y-5 animate-in fade-in">
+            <div className="w-14 h-14 border-2 border-zinc-900 dark:border-zinc-100 flex items-center justify-center text-zinc-900 dark:text-zinc-100 animate-pulse">
+              <Sparkles className="w-7 h-7 text-amber-500" />
+            </div>
+            <div className="space-y-2">
+              <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
+                [ HOT SEAT TAKE 1 COMPLETE • UPGRADE PIPELINE ]
+              </div>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-zinc-900 dark:text-zinc-100">
+                Synthesizing Your Band 8.5 Master Script
+              </h2>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed max-w-sm mx-auto">
+                Elevating your authentic spoken answers into native cleft sentences, rhythmic breath units, and Cambridge collocations.
+              </p>
+            </div>
+
+            <div className="w-full p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-left space-y-2 text-[11px]">
+              <div className="flex items-center justify-between text-[10px] text-zinc-500 uppercase font-mono">
+                <span>ACOUSTIC TRANSFORMATION:</span>
+                <span className="animate-spin text-amber-500">◒</span>
+              </div>
+              <ul className="space-y-1 text-zinc-600 dark:text-zinc-400 font-mono">
+                <li>✓ Preserving 100% authentic personal facts & opinions</li>
+                <li>✓ Structuring cleft sentences & fronted adverbials</li>
+                <li>✓ Injecting natural IELTS collocations (100% Rule)</li>
+                <li>✓ Marking breath pause units (|) & tonic stresses</li>
+                <li>✓ Persisting into Local Vault for repetitive mirroring</li>
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* View 4: Master Script Mirror Gym (Acoustic Apprenticeship) */}
+        {view === "mirrorgym" && (
+          <div className="h-full w-full overflow-hidden p-2 sm:p-4">
+            <div className="h-full max-w-4xl mx-auto bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-5 shadow-xs flex flex-col overflow-hidden">
+              <MasterMirrorGym
+                repository={masterScript}
+                onSpeakText={handleSpeakCoachText}
+                onStopSpeech={handleStopCoachText}
+                isCoachSpeaking={isCoachTtsSpeaking}
+                studentWordCount={studentWordCount}
+                onStartHotSeatRetake={() => {
+                  handleRestart();
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* View 5: Diagnostic Feedback */}
         {view === "feedback" && (
           <div className="h-full w-full overflow-y-auto p-2 scrollbar-thin">
             {isGrading ? (
@@ -613,6 +734,7 @@ export default function Home() {
                 feedback={feedback}
                 noSpeechDetected={noSpeechDetected}
                 onRestart={handleRestart}
+                onEnterMirrorGym={() => setView("mirrorgym")}
               />
             ) : (
               <div className="text-center p-8 font-mono text-xs text-zinc-500">
