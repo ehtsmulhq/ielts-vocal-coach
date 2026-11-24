@@ -2,6 +2,9 @@
   "name": "ielts-coach",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,6 +17,8 @@
   },
   "dependencies": {
     "@google/genai": "^2.27.0",
+    "@upstash/ratelimit": "^2.2.2",
+    "@upstash/redis": "^1.41.1",
     "lucide-react": "^1.52.0",
     "next": "16.3.8",
     "react": "19.2.8",

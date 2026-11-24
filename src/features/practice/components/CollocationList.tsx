@@ -18,7 +18,7 @@ export function CollocationList({ items, player }: { items: TargetCollocation[];
               <button
                 type="button"
                 onClick={() => void player.playModel(c.phrase, 0.9)}
-                className="text-subtle hover:text-fg cursor-pointer"
+                className="-m-2 grid h-10 w-10 shrink-0 place-items-center rounded-full text-subtle hover:bg-surface-2 hover:text-fg cursor-pointer"
                 aria-label={`Hear the model say "${c.phrase}"`}
               >
                 <Volume2 className="h-4 w-4" aria-hidden />

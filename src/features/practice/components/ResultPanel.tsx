@@ -130,7 +130,7 @@ export function ResultPanel({
                 {m.phoneticTip && (
                   <p className="text-sm text-muted">
                     <span className="font-medium text-fg">Sound / stress:</span>{" "}
-                    <span className="font-mono">{m.phoneticTip}</span>
+                    <span className="break-words font-mono">{m.phoneticTip}</span>
                   </p>
                 )}
               </li>

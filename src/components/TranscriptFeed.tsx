@@ -47,7 +47,7 @@ export function TranscriptFeed({
   };
 
   return (
-    <div role="log" aria-label="Interview transcript" className="w-full flex flex-col h-[400px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4 overflow-hidden font-sans">
+    <div role="log" aria-label="Interview transcript" className="w-full flex flex-col h-[55dvh] lg:h-[400px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4 overflow-hidden font-sans">
       {/* Journal Header */}
       <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 font-mono text-xs uppercase tracking-widest text-subtle">
         <div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300">

@@ -48,7 +48,7 @@ export function CoachPicker({
                 type="button"
                 onClick={() => onPreview(t)}
                 aria-label={previewingId === t.id ? `Stop ${t.name}'s preview` : `Hear ${t.name}`}
-                className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-fg cursor-pointer"
+                className="grid h-10 w-10 place-items-center rounded-full text-muted sm:h-8 sm:w-8 hover:bg-surface-2 hover:text-fg cursor-pointer"
               >
                 {previewingId === t.id ? <Square className="h-4 w-4" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
               </button>

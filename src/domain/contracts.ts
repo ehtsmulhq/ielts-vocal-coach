@@ -26,8 +26,11 @@ export function cleanName(raw: string): string {
 
 const PersonName = z.string().max(200).transform(cleanName);
 
-/** ~7.5 MB of base64 ≈ 5.6 MB of audio: about 3 minutes of WAV or far longer as Opus. */
-export const MAX_AUDIO_BASE64_CHARS = 7_500_000;
+/**
+ * Per clip: 3M base64 chars ≈ 2.25 MB of audio (about 45 s of 24 kHz WAV, far longer as Opus).
+ * Vercel caps a request body at 4.5 MB, so the coach route also caps the whole body at ~4 MB.
+ */
+export const MAX_AUDIO_BASE64_CHARS = 3_000_000;
 export const MAX_SCRIPT_CHARS = 4_000;
 
 export const TranscriptEntrySchema = z.object({

@@ -14,7 +14,12 @@ import { ModelAudioRequestSchema } from "@/domain/contracts";
  * reading is checked against the script and retried once, then Gemini TTS is
  * used as a fallback. Clips are cached by the browser, so each is rendered once.
  */
-export const maxDuration = 120;
+export const maxDuration = 60;
+
+/** Live gets at most this long in total (both attempts), leaving the rest of the 60 s for the TTS fallback. */
+const LIVE_BUDGET_MS = 32_000;
+/** A second Live attempt is only worth starting with at least this much of the budget left. */
+const MIN_ATTEMPT_MS = 10_000;
 
 function wavResponse(wav: Buffer, engine: string, model: string, fallback = false): Response {
   const headers: Record<string, string> = {
@@ -29,9 +34,12 @@ function wavResponse(wav: Buffer, engine: string, model: string, fallback = fals
 }
 
 async function renderLive(text: string, voice: string): Promise<Buffer | null> {
+  const deadline = Date.now() + LIVE_BUDGET_MS;
   for (let attempt = 0; attempt < 2; attempt++) {
+    const remaining = deadline - Date.now();
+    if (remaining < MIN_ATTEMPT_MS) break;
     try {
-      const r = await renderWithLive(text, voice, LIVE_RENDER_MODEL);
+      const r = await renderWithLive(text, voice, LIVE_RENDER_MODEL, Math.min(25_000, remaining));
       if (isFaithfulReading(text, r.transcript)) return pcm16ToWav(trimSilence(r.pcm, r.sampleRate), r.sampleRate);
       console.warn("[model-audio] Live reading was not verbatim, retrying:", r.transcript.slice(0, 120));
     } catch (err) {

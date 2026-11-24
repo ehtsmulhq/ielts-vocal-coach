@@ -143,7 +143,7 @@ export function TodayScreen() {
       )}
 
       {!isNew && hydrated && (
-        <Card className="grid grid-cols-2 gap-6 sm:grid-cols-3">
+        <Card className="grid grid-cols-3 gap-4 sm:gap-6">
           <div className="flex items-center gap-3">
             <Flame className="h-6 w-6 text-warning" aria-hidden />
             <Stat label="Day streak" value={String(streak)} />

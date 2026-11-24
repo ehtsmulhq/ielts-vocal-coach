@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface TrendPoint {
   at: number;
@@ -10,7 +10,7 @@ export interface TrendPoint {
 
 const W = 640;
 const H = 220;
-const PAD = { top: 16, right: 40, bottom: 28, left: 36 };
+const BASE_PAD = { top: 16, right: 40, bottom: 28, left: 36 };
 const GRID = [0, 25, 50, 75, 100];
 
 const fmtDate = (at: number) => new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -22,6 +22,20 @@ const fmtDate = (at: number) => new Date(at).toLocaleDateString("en-GB", { day: 
  */
 export function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
   const [hover, setHover] = useState<number | null>(null);
+  // The SVG scales with its container; scale text and margins back up on narrow screens so labels stay ~12px.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [k, setK] = useState(1);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const fit = () => setK(Math.min(2.2, Math.max(1, W / Math.max(1, el.clientWidth))));
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const fs = 12 * k;
+  const PAD = { top: BASE_PAD.top, right: BASE_PAD.right * k, bottom: BASE_PAD.bottom * k, left: BASE_PAD.left * k };
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
   const x = (i: number) => PAD.left + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
@@ -33,7 +47,7 @@ export function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
 
   return (
     <figure className="space-y-3">
-      <div className="relative">
+      <div ref={boxRef} className="relative">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="h-auto w-full"
@@ -44,16 +58,16 @@ export function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
           {GRID.map((g) => (
             <g key={g}>
               <line x1={PAD.left} x2={W - PAD.right} y1={y(g)} y2={y(g)} stroke="var(--line)" strokeWidth={1} />
-              <text x={PAD.left - 8} y={y(g)} dy="0.35em" textAnchor="end" fontSize={12} fill="var(--subtle)">
+              <text x={PAD.left - 8} y={y(g)} dy="0.35em" textAnchor="end" fontSize={fs} fill="var(--subtle)">
                 {g}
               </text>
             </g>
           ))}
-          <text x={PAD.left} y={H - 6} fontSize={12} fill="var(--subtle)">
+          <text x={PAD.left} y={H - 6} fontSize={fs} fill="var(--subtle)">
             {fmtDate(points[0].at)}
           </text>
           {points.length > 1 && (
-            <text x={W - PAD.right} y={H - 6} textAnchor="end" fontSize={12} fill="var(--subtle)">
+            <text x={W - PAD.right} y={H - 6} textAnchor="end" fontSize={fs} fill="var(--subtle)">
               {fmtDate(last.at)}
             </text>
           )}
@@ -74,7 +88,7 @@ export function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
               strokeWidth={2}
             />
           ))}
-          <text x={x(points.length - 1) + 8} y={y(last.score)} dy="0.35em" fontSize={12} fontWeight={600} fill="var(--fg)">
+          <text x={x(points.length - 1) + 8} y={y(last.score)} dy="0.35em" fontSize={fs} fontWeight={600} fill="var(--fg)">
             {last.score}
           </text>
 
@@ -90,6 +104,7 @@ export function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
               tabIndex={0}
               aria-label={`${fmtDate(p.at)}: ${p.score} (${p.label})`}
               onMouseEnter={() => setHover(i)}
+              onPointerDown={() => setHover(i)}
               onFocus={() => setHover(i)}
               onBlur={() => setHover(null)}
             />
@@ -99,7 +114,7 @@ export function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
         {active && hover !== null && (
           <div
             className="pointer-events-none absolute -translate-x-1/2 -translate-y-full rounded-[var(--radius-control)] border border-line bg-surface px-3 py-2 text-xs shadow-md"
-            style={{ left: `${(x(hover) / W) * 100}%`, top: `${(y(active.score) / H) * 100}%`, marginTop: -10 }}
+            style={{ left: `${Math.min(85, Math.max(15, (x(hover) / W) * 100))}%`, top: `${(y(active.score) / H) * 100}%`, marginTop: -10 }}
           >
             <p className="font-semibold tabular-nums">{active.score}</p>
             <p className="text-muted">{active.label}</p>
@@ -109,7 +124,7 @@ export function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
       </div>
 
       <details className="text-sm">
-        <summary className="cursor-pointer text-muted hover:text-fg">Show as table</summary>
+        <summary className="cursor-pointer py-2.5 text-muted hover:text-fg sm:py-0">Show as table</summary>
         <table className="mt-2 w-full text-left">
           <thead className="text-subtle">
             <tr>

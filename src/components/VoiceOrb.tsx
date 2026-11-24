@@ -239,7 +239,7 @@ export function VoiceOrb({
         <button
           type="button"
           onClick={onToggleMute}
-          className={`flex items-center justify-center gap-1.5 py-2 px-3 border font-mono text-xs uppercase transition-all cursor-pointer ${
+          className={`flex min-h-11 items-center justify-center gap-1.5 py-2 px-2 text-center leading-tight sm:min-h-0 sm:px-3 border font-mono text-xs uppercase transition-all cursor-pointer ${
             isMuted
               ? "bg-rose-900/20 border-rose-600 text-rose-400 font-bold"
               : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400"
@@ -253,7 +253,7 @@ export function VoiceOrb({
         <button
           type="button"
           onClick={() => onChangeMicMode(micMode === "continuous" ? "push-to-talk" : "continuous")}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-mono text-xs uppercase hover:border-zinc-400 transition-all cursor-pointer"
+          className="flex min-h-11 items-center justify-center gap-1.5 py-2 px-2 text-center leading-tight sm:min-h-0 sm:px-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-mono text-xs uppercase hover:border-zinc-400 transition-all cursor-pointer"
         >
           <Radio className="w-3 h-3" />
           <span>{micMode === "continuous" ? "CONTINUOUS" : "PUSH-TO-TALK"}</span>
@@ -264,7 +264,7 @@ export function VoiceOrb({
           <button
             type="button"
             onClick={onToggleSpeechProtection}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 border font-mono text-xs uppercase transition-all cursor-pointer ${
+            className={`flex min-h-11 items-center justify-center gap-1.5 py-2 px-2 text-center leading-tight sm:min-h-0 sm:px-3 border font-mono text-xs uppercase transition-all cursor-pointer ${
               speechProtection === "protected"
                 ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
                 : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -280,17 +280,44 @@ export function VoiceOrb({
           type="button"
           onClick={onInterruptTutor}
           disabled={!tutorSpeaking}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 disabled:opacity-40 font-mono text-xs uppercase hover:border-zinc-400 transition-all cursor-pointer"
+          className="flex min-h-11 items-center justify-center gap-1.5 py-2 px-2 text-center leading-tight sm:min-h-0 sm:px-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 disabled:opacity-40 font-mono text-xs uppercase hover:border-zinc-400 transition-all cursor-pointer"
         >
           <FastForward className="w-3 h-3" />
           <span>INTERRUPT</span>
         </button>
       </div>
 
-      {/* Push to talk instruction bar */}
+      {/* Push to talk: a big hold-to-talk button for touch screens (and mice), plus the Spacebar hint on keyboards. */}
       {micMode === "push-to-talk" && (
-        <div className="w-full text-center font-mono text-xs text-subtle py-1 border-t border-zinc-200 dark:border-zinc-800">
-          Hold <kbd className="px-1 bg-zinc-200 dark:bg-zinc-800 font-bold">Spacebar</kbd> to speak
+        <div className="w-full space-y-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <button
+            type="button"
+            disabled={status !== "live"}
+            onPointerDown={(e) => {
+              if (status !== "live") return;
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              if (tutorSpeaking) onInterruptTutor();
+              setIsPressingTalk(true);
+              onPushToTalkChange(true);
+            }}
+            onPointerUp={() => {
+              setIsPressingTalk(false);
+              onPushToTalkChange(false);
+            }}
+            onPointerCancel={() => {
+              setIsPressingTalk(false);
+              onPushToTalkChange(false);
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            className="flex h-14 w-full touch-none select-none items-center justify-center gap-2 rounded-[var(--radius-control)] bg-accent font-medium text-on-accent transition-transform active:scale-[0.98] disabled:opacity-40"
+          >
+            <Mic className="h-5 w-5" aria-hidden />
+            Hold to talk
+          </button>
+          <p className="hidden text-center font-mono text-xs text-subtle sm:block">
+            or hold <kbd className="bg-zinc-200 px-1 font-bold dark:bg-zinc-800">Spacebar</kbd>
+          </p>
         </div>
       )}
     </div>

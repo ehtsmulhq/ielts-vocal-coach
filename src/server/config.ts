@@ -50,6 +50,20 @@ export const LIVE_RENDER_MODEL = process.env.LIVE_RENDER_MODEL?.trim() || LIVE_M
  */
 export const TRUST_PROXY = process.env.TRUST_PROXY === "1";
 
+/**
+ * Shared rate-limit and daily-budget store (Upstash Redis REST). When unset the
+ * limits live in memory, which is fine for local dev but per-instance on
+ * serverless hosts. The Vercel Marketplace integration may name the pair KV_REST_API_*.
+ */
+export const REDIS_REST_URL = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || "").trim();
+export const REDIS_REST_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "").trim();
+
+/** Most costly AI calls (Live tokens, model clips, coaching, feedback) the whole app may make per UTC day. */
+export const DAILY_AI_LIMIT = (() => {
+  const n = Number(process.env.DAILY_AI_LIMIT);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 2000;
+})();
+
 /** Extra origins allowed to call the API (comma-separated), e.g. a staging domain. */
 export const ALLOWED_ORIGINS = list(process.env.ALLOWED_ORIGINS, "");
 
