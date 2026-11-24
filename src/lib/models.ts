@@ -31,3 +31,16 @@ export const LIVE_VOICES = [
   { id: "Zephyr", name: "Zephyr (Bright)", desc: "Crisp, high clarity projection" },
   { id: "Orion", name: "Orion (Rich Baritone)", desc: "Sophisticated cadence" },
 ];
+
+/**
+ * Text-to-speech models used to render the British RP model audio for shadowing.
+ * Tried in order; the browser speechSynthesis engine is the final client-side fallback.
+ */
+export const TTS_MODELS: string[] = (
+  process.env.TTS_MODELS ?? "gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-3.8-flash-lite-tts"
+)
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+export const TTS_VOICE = process.env.TTS_VOICE ?? "Puck";

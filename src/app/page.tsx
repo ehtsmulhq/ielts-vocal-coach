@@ -56,7 +56,7 @@ import {
 } from "lucide-react";
 
 export default function Home() {
-  const [view, setView] = useState<"setup" | "session" | "mirrorgym" | "upgrading" | "feedback">("setup");
+  const [view, setView] = useState<"setup" | "session" | "mirrorgym" | "upgrading" | "feedback">("mirrorgym");
   const [band, setBand] = useState<TargetBand>("7.5");
   const [activeModel, setActiveModel] = useState<string>(LIVE_MODEL);
   const profile = useSyncExternalStore(
@@ -650,9 +650,9 @@ export default function Home() {
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
             <span className="font-serif font-bold text-sm sm:text-base tracking-tight text-zinc-900 dark:text-zinc-100">
-              CAMBRIDGE HOT SEAT
+              ACCENT SHADOWING GYM
             </span>
-            <span className="text-[10px] text-zinc-400 hidden sm:inline">IELTS Academic</span>
+            <span className="text-[10px] text-zinc-400 hidden sm:inline">British RP</span>
           </div>
 
           {/* Stepper in Header for Live Session */}
@@ -683,7 +683,7 @@ export default function Home() {
           {view === "mirrorgym" && (
             <div className="flex items-center gap-2 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
               <Sparkles className="w-3.5 h-3.5" />
-              <span className="tracking-wider hidden sm:inline">Mirror Practice</span>
+              <span className="tracking-wider hidden sm:inline">Shadowing</span>
             </div>
           )}
         </div>
@@ -728,7 +728,7 @@ export default function Home() {
               className="flex items-center gap-1.5 px-3.5 py-1 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs uppercase font-bold transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>EXIT TO DASHBOARD</span>
+              <span>CAPTURE NEW SCRIPTS</span>
             </button>
           )}
 

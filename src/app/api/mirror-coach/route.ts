@@ -5,6 +5,8 @@ interface MirrorCoachRequest {
   candidateSpokenText?: string;
   audioBase64?: string;
   audioMimeType?: string;
+  modelAudioBase64?: string;
+  modelAudioMimeType?: string;
   targetCollocations: { phrase: string; meaning: string }[];
   thoughtChunks: string[];
   durationSeconds: number;
@@ -30,6 +32,14 @@ interface MirrorCoachResponse {
   drVanceSpokenFeedback: string;
   matchedWordsCount: number;
   totalWordsCount: number;
+  accent?: {
+    overall: number;
+    stress: number;
+    rhythm: number;
+    intonation: number;
+    sounds: number;
+    focusTip: string;
+  };
 }
 
 const mirrorCoachSchema = {
@@ -63,6 +73,18 @@ const mirrorCoachSchema = {
     drVanceSpokenFeedback: { type: "string" },
     matchedWordsCount: { type: "number" },
     totalWordsCount: { type: "number" },
+    accent: {
+      type: "object",
+      properties: {
+        overall: { type: "number" },
+        stress: { type: "number" },
+        rhythm: { type: "number" },
+        intonation: { type: "number" },
+        sounds: { type: "number" },
+        focusTip: { type: "string" },
+      },
+      required: ["overall", "stress", "rhythm", "intonation", "sounds", "focusTip"],
+    },
   },
   required: [
     "accuracyScore",
@@ -84,6 +106,8 @@ export async function POST(request: Request) {
       candidateSpokenText = "",
       audioBase64,
       audioMimeType = "audio/webm",
+      modelAudioBase64,
+      modelAudioMimeType = "audio/wav",
       targetCollocations = [],
       thoughtChunks = [],
       durationSeconds = 10,
@@ -149,7 +173,21 @@ ${
 }
 DELIVERY DURATION: ${durationSeconds} seconds.
 
-COACHING GUIDELINES:
+${
+  audioBase64 && modelAudioBase64
+    ? `ACCENT SHADOWING COMPARISON:
+Two audio clips are attached, in this order: (1) the BRITISH RP MODEL reference, (2) the CANDIDATE'S shadowing attempt of the same script.
+Compare the candidate against the model on accent, scoring each 0-100 in the \`accent\` object:
+- sounds: RP vowel quality (e.g. TRAP vs BATH, non-rhotic /r/, linking r), /t/ release, /θ/ and /ð/, /v/ vs /w/.
+- stress: word stress and sentence stress / nuclear stress on key content words; weak forms of function words.
+- rhythm: stress-timed rhythm, linking, pauses at the thought chunks.
+- intonation: falling/rising pitch contour, emphasis.
+- overall: your holistic accent-match score.
+- focusTip: ONE specific, doable thing to fix on the next rep.
+Use the \`pronunciation\` mistake type and \`phoneticTip\` (give the sound or stress pattern, e.g. "/ˈɪn.tər.nɛt/") for accent errors.
+`
+    : ""
+}COACHING GUIDELINES:
 1. Objectively compare candidate's delivery with target script:
    - Check if they deployed the mandatory collocations.
    - Check if they preserved Band 8.5 grammatical structures (cleft sentences, fronted adverbials, concessive clauses).
@@ -165,6 +203,9 @@ COACHING GUIDELINES:
 
     if (audioBase64) {
       const contents = [
+        ...(modelAudioBase64
+          ? [{ inlineData: { mimeType: modelAudioMimeType, data: modelAudioBase64 } }]
+          : []),
         {
           inlineData: {
             mimeType: audioMimeType,

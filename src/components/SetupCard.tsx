@@ -138,10 +138,10 @@ export function SetupCard({
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-serif tracking-tight text-zinc-900 dark:text-zinc-50">
-          Daily Authentic Speaking Hot Seat
+          Capture Your Own Scripts
         </h1>
         <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
-          Take the unscripted 3-part Cambridge test daily. Point out measurable improvements in fluency, grammar, and vocabulary across every session.
+          Answer a short, unscripted 3-part Cambridge interview. Your answers are upgraded into Band 8.5+ scripts that you then shadow in the Accent Shadowing Gym.
         </p>
 
         {/* Previous Session Improvement Snapshot (If tests have been taken) */}
@@ -420,7 +420,7 @@ export function SetupCard({
             className="w-full py-2.5 px-4 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono text-xs uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-200 dark:border-zinc-800"
           >
             <Flame className="w-3.5 h-3.5 text-amber-500" />
-            <span>Mirror Practice</span>
+            <span>Back to Shadowing Gym</span>
           </button>
         </div>
       </form>

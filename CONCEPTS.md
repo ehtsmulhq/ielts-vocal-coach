@@ -1,4 +1,6 @@
-# IELTS Vocal Coach — Core Concepts
+# Accent Shadowing Gym — Core Concepts
+
+> Current focus: **shadowing**. The learner copies a British RP model voice (Listen, Shadow, Deliver) to build accent muscle memory. See README.md and PROJECT_OVERVIEW.md for the current app; the sections below record the original IELTS live-examiner design, which is still used to capture scripts.
 
 ## 1. The problem we are solving
 Many learners can **think** and **write** in English but freeze when **speaking**. The bottleneck is not knowledge — it is
@@ -33,6 +35,8 @@ start the next stage, so the UI and the tutor always stay in sync.
 | Job | Model | Why |
 |---|---|---|
 | Generate lesson (JSON) | `gemini-3.5-flash-lite` (fallbacks: `gemini-2.5-flash-lite`, `gemini-2.5-flash`) | Fast, cheap, 500 requests/day on the free tier |
+| RP model audio (shadowing) | `gemini-3.8-flash-tts` (fallbacks in `TTS_MODELS`) | Consistent British RP model clip, cached per script |
+| Accent coaching (model clip + learner clip) | text models via `/api/mirror-coach` | Multimodal comparison of accent, stress and rhythm |
 | Live voice examiner | `gemini-3.8-live` | Real-time two-way audio with an unlimited daily quota |
 | Score the transcript | `gemini-3.5-flash-lite` (same fallbacks) | Structured JSON grading, 1 call per session |
 

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import type { MasterScriptRepository, ScriptItem } from "@/lib/master-script";
 import { logRepetitionCompleted } from "@/lib/master-script";
+import { getModelAudio, blobToBase64 } from "@/lib/model-audio";
+import { SHADOWING_LIBRARY, LIBRARY_PART_LABELS } from "@/lib/shadowing-library";
 import {
   Volume2,
   Play,
@@ -13,13 +15,35 @@ import {
   ChevronLeft,
   ChevronRight,
   Activity,
-  Award,
   Mic,
   MicOff,
   AlertCircle,
   Square,
   RefreshCw,
+  Repeat,
+  Headphones,
 } from "lucide-react";
+
+const PHASES = [
+  { id: "absorb", label: "1. Listen" },
+  { id: "shadow", label: "2. Shadow" },
+  { id: "deliver", label: "3. Deliver" },
+] as const;
+
+// Module-level so React's purity lint doesn't flag timing calls inside event handlers.
+const nowMs = () => performance.now();
+
+const RATES = [0.75, 0.85, 1] as const;
+
+function pickRecorderMime(): string {
+  if (typeof MediaRecorder === "undefined") return "";
+  for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]) {
+    if (MediaRecorder.isTypeSupported(m)) return m;
+  }
+  return "";
+}
+
+const accentBarColor = (n: number) => (n >= 80 ? "bg-emerald-500" : n >= 60 ? "bg-amber-500" : "bg-rose-500");
 
 interface MirrorMistake {
   type: "syntax" | "collocation" | "hesitation" | "pronunciation" | "substitution";
@@ -39,6 +63,14 @@ interface MirrorCoachResponse {
   drVanceSpokenFeedback: string;
   matchedWordsCount: number;
   totalWordsCount: number;
+  accent?: {
+    overall: number;
+    stress: number;
+    rhythm: number;
+    intonation: number;
+    sounds: number;
+    focusTip: string;
+  };
 }
 
 interface MasterMirrorGymProps {
@@ -54,14 +86,31 @@ export function MasterMirrorGym({
   repository,
   onSpeakText,
   onStopSpeech,
-  isCoachSpeaking,
   onStartHotSeatRetake,
 }: MasterMirrorGymProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [source, setSource] = useState<"mine" | "library">("mine");
   const [showOriginalComparison, setShowOriginalComparison] = useState(false);
   const [workoutRep, setWorkoutRep] = useState<"absorb" | "shadow" | "deliver">("absorb");
   const [readingSeconds, setReadingSeconds] = useState(0);
   const [repJustLogged, setRepJustLogged] = useState(false);
+
+  // RP model audio + chunk shadowing state
+  const [modelRate, setModelRate] = useState<number>(0.85);
+  const [modelLoading, setModelLoading] = useState(false);
+  const [isModelPlaying, setIsModelPlaying] = useState(false);
+  const [activeChunk, setActiveChunk] = useState(-1);
+  const [shadowRunning, setShadowRunning] = useState(false);
+  const [turnActive, setTurnActive] = useState(false);
+  const [chunkTakes, setChunkTakes] = useState<Record<number, string>>({});
+  const [takeUrl, setTakeUrl] = useState<string | null>(null);
+  const [usingFallbackVoice, setUsingFallbackVoice] = useState(false);
+
+  const modelAudioElRef = useRef<HTMLAudioElement | null>(null);
+  const playbackDoneRef = useRef<(() => void) | null>(null);
+  const shadowAbortRef = useRef(false);
+  const chunkTakesRef = useRef<Record<number, string>>({});
+  const takeUrlRef = useRef<string | null>(null);
 
   // Live AI Coach Listening & Audio Telemetry State
   const [isListening, setIsListening] = useState(false);
@@ -79,8 +128,163 @@ export function MasterMirrorGym({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  const items = repository.items;
+  const items = source === "mine" ? repository.items : SHADOWING_LIBRARY;
   const currentItem: ScriptItem = items[activeIndex] || items[0];
+  const itemStats = repository.itemStats?.[currentItem.id];
+  const cleanChunks = currentItem.thoughtChunks.map((c) => c.replace(/\|/g, "").trim()).filter(Boolean);
+
+  const stopModel = () => {
+    const a = modelAudioElRef.current;
+    if (a) {
+      a.pause();
+      modelAudioElRef.current = null;
+    }
+    playbackDoneRef.current?.();
+    playbackDoneRef.current = null;
+    setIsModelPlaying(false);
+    onStopSpeech?.();
+  };
+
+  const playBlob = (blob: Blob, rate: number) =>
+    new Promise<void>((resolve) => {
+      stopModel();
+      const url = URL.createObjectURL(blob);
+      const a = new Audio(url);
+      a.playbackRate = rate;
+      modelAudioElRef.current = a;
+      setIsModelPlaying(true);
+      const done = () => {
+        URL.revokeObjectURL(url);
+        if (modelAudioElRef.current === a) {
+          modelAudioElRef.current = null;
+          setIsModelPlaying(false);
+        }
+        playbackDoneRef.current = null;
+        resolve();
+      };
+      playbackDoneRef.current = done;
+      a.onended = done;
+      a.onerror = done;
+      a.play().catch(done);
+    });
+
+  /** Plays RP model audio. Falls back to browser TTS if Gemini TTS is unavailable. */
+  const playModel = async (rate: number, text = currentItem.upgradedScript): Promise<{ ok: boolean; ms: number }> => {
+    try {
+      setModelLoading(true);
+      const blob = await getModelAudio(text);
+      setModelLoading(false);
+      setUsingFallbackVoice(false);
+      const t0 = nowMs();
+      await playBlob(blob, rate);
+      return { ok: true, ms: nowMs() - t0 };
+    } catch (err) {
+      setModelLoading(false);
+      console.warn("[mirror-gym] Model audio unavailable, using browser voice:", err);
+      setUsingFallbackVoice(true);
+      onSpeakText?.(text, rate);
+      return { ok: false, ms: (text.split(/\s+/).length * 420) / rate };
+    }
+  };
+
+  const waitMs = async (ms: number) => {
+    const end = nowMs() + ms;
+    while (nowMs() < end && !shadowAbortRef.current) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  };
+
+  /** Records the learner's repeat for `ms`, without any ASR/analysis. */
+  const recordTurn = async (ms: number): Promise<Blob | null> => {
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+    } catch {
+      setMicError("Microphone access denied or unavailable. Please grant microphone permission in your browser settings.");
+      shadowAbortRef.current = true;
+      return null;
+    }
+    const mime = pickRecorderMime();
+    const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunks.push(e.data);
+    };
+    const stopped = new Promise<void>((r) => {
+      rec.onstop = () => r();
+    });
+    rec.start();
+    setTurnActive(true);
+    await waitMs(ms);
+    setTurnActive(false);
+    if (rec.state !== "inactive") rec.stop();
+    await stopped;
+    stream.getTracks().forEach((t) => t.stop());
+    return chunks.length ? new Blob(chunks, { type: rec.mimeType || "audio/webm" }) : null;
+  };
+
+  const runShadowLoop = async (startAt = 0, onlyOne = false) => {
+    if (shadowRunning) return;
+    setMicError(null);
+    shadowAbortRef.current = false;
+    setShadowRunning(true);
+    setWorkoutRep("shadow");
+    for (let i = startAt; i < cleanChunks.length; i++) {
+      if (shadowAbortRef.current) break;
+      setActiveChunk(i);
+      const { ms } = await playModel(modelRate, cleanChunks[i]);
+      if (shadowAbortRef.current) break;
+      // Learner gets the model clip's duration (plus a margin) to shadow it.
+      const blob = await recordTurn(Math.max(1500, ms * 1.25 + 600));
+      if (blob && blob.size > 200) {
+        const url = URL.createObjectURL(blob);
+        const old = chunkTakesRef.current[i];
+        if (old) URL.revokeObjectURL(old);
+        chunkTakesRef.current = { ...chunkTakesRef.current, [i]: url };
+        setChunkTakes(chunkTakesRef.current);
+      }
+      if (onlyOne) break;
+    }
+    setActiveChunk(-1);
+    setShadowRunning(false);
+  };
+
+  const stopShadowLoop = () => {
+    shadowAbortRef.current = true;
+    stopModel();
+  };
+
+  const playUrl = (url: string) => {
+    stopModel();
+    const a = new Audio(url);
+    modelAudioElRef.current = a;
+    setIsModelPlaying(true);
+    const done = () => {
+      if (modelAudioElRef.current === a) {
+        modelAudioElRef.current = null;
+        setIsModelPlaying(false);
+      }
+    };
+    a.onended = done;
+    a.onerror = done;
+    a.play().catch(done);
+  };
+
+  const resetPractice = () => {
+    shadowAbortRef.current = true;
+    stopModel();
+    Object.values(chunkTakesRef.current).forEach((u) => URL.revokeObjectURL(u));
+    chunkTakesRef.current = {};
+    setChunkTakes({});
+    if (takeUrlRef.current) URL.revokeObjectURL(takeUrlRef.current);
+    takeUrlRef.current = null;
+    setTakeUrl(null);
+    setActiveChunk(-1);
+    setShadowRunning(false);
+    setTurnActive(false);
+  };
 
   const stopListening = () => {
     isListeningRef.current = false;
@@ -134,7 +338,9 @@ export function MasterMirrorGym({
   useEffect(() => {
     return () => {
       stopListening();
+      resetPractice();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIndex]);
 
   const words = currentItem.upgradedScript.split(/\s+/);
@@ -151,7 +357,8 @@ export function MasterMirrorGym({
     setCoachAnalysis(null);
     setReadingSeconds(0);
     audioChunksRef.current = [];
-    onStopSpeech?.();
+    shadowAbortRef.current = true;
+    stopModel();
 
     let stream: MediaStream;
     try {
@@ -291,13 +498,11 @@ export function MasterMirrorGym({
       try {
         const audioBlob = new Blob(audioChunksRef.current, { type: audioMimeType });
         if (audioBlob.size > 200) {
-          const buffer = await audioBlob.arrayBuffer();
-          const bytes = new Uint8Array(buffer);
-          let binary = "";
-          for (let i = 0; i < bytes.length; i += 0x8000) {
-            binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-          }
-          audioBase64 = btoa(binary);
+          audioBase64 = await blobToBase64(audioBlob);
+          // Keep the take in memory (never persisted) for A/B playback against the model.
+          if (takeUrlRef.current) URL.revokeObjectURL(takeUrlRef.current);
+          takeUrlRef.current = URL.createObjectURL(audioBlob);
+          setTakeUrl(takeUrlRef.current);
         }
       } catch (err) {
         console.warn("Could not encode audio blob to base64:", err);
@@ -305,6 +510,16 @@ export function MasterMirrorGym({
     }
 
     stopListening();
+
+    // Attach the British RP reference clip so Gemini can compare accent, not just words.
+    let modelAudioBase64: string | undefined;
+    if (audioBase64) {
+      try {
+        modelAudioBase64 = await blobToBase64(await getModelAudio(currentItem.upgradedScript));
+      } catch (err) {
+        console.warn("Reference audio unavailable; coaching without accent comparison:", err);
+      }
+    }
 
     try {
       const res = await fetch("/api/mirror-coach", {
@@ -315,6 +530,8 @@ export function MasterMirrorGym({
           candidateSpokenText: spokenTranscript,
           audioBase64,
           audioMimeType,
+          modelAudioBase64,
+          modelAudioMimeType: "audio/wav",
           targetCollocations: currentItem.targetCollocations,
           thoughtChunks: currentItem.thoughtChunks,
           durationSeconds: readingSeconds || 10,
@@ -334,6 +551,13 @@ export function MasterMirrorGym({
         setSpokenTranscript(data.transcribedSpokenText);
       }
 
+      // Auto-log the rep once a real, scored take was analysed.
+      if (data.accuracyScore > 0) {
+        logRepetitionCompleted(currentItem.id, data.accent?.overall ?? data.accuracyScore);
+        setRepJustLogged(true);
+        setTimeout(() => setRepJustLogged(false), 2500);
+      }
+
       // Automatically speak Dr. Vance's spoken feedback aloud!
       if (data.drVanceSpokenFeedback && onSpeakText) {
         onSpeakText(data.drVanceSpokenFeedback, 1.0);
@@ -346,10 +570,17 @@ export function MasterMirrorGym({
     }
   };
 
-  const handleLogRep = () => {
-    logRepetitionCompleted();
-    setRepJustLogged(true);
-    setTimeout(() => setRepJustLogged(false), 2000);
+  const switchSource = (next: "mine" | "library") => {
+    if (next === source) return;
+    stopListening();
+    resetPractice();
+    setSource(next);
+    setActiveIndex(0);
+    setReadingSeconds(0);
+    setSpokenTranscript("");
+    setCoachAnalysis(null);
+    setShowOriginalComparison(false);
+    setWorkoutRep("absorb");
   };
 
   const handleNext = () => {
@@ -360,6 +591,7 @@ export function MasterMirrorGym({
       setSpokenTranscript("");
       setCoachAnalysis(null);
       setWorkoutRep("absorb");
+      resetPractice();
     }
   };
 
@@ -371,6 +603,7 @@ export function MasterMirrorGym({
       setSpokenTranscript("");
       setCoachAnalysis(null);
       setWorkoutRep("absorb");
+      resetPractice();
     }
   };
 
@@ -389,7 +622,9 @@ export function MasterMirrorGym({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 px-2.5 py-0.5 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold">
             <Flame className="w-3 h-3 text-amber-500" />
-            <span>Total Reps: {repository.totalPracticeCount}</span>
+            <span>
+              Day streak: {repository.dayStreak ?? 0} · Total reps: {repository.totalPracticeCount}
+            </span>
           </div>
 
           {onStartHotSeatRetake && (
@@ -403,6 +638,40 @@ export function MasterMirrorGym({
             </button>
           )}
         </div>
+      </div>
+
+      {repository.totalPracticeCount === 0 && (
+        <p className="text-[11px] text-zinc-500 font-sans leading-snug">
+          <strong className="font-mono uppercase text-[10px] text-zinc-700 dark:text-zinc-300">How shadowing works: </strong>
+          listen to a British RP model, copy it phrase by phrase, then deliver the whole answer. Repeating the same
+          script builds the accent into muscle memory. Use &ldquo;Capture new scripts&rdquo; to turn your own answers into scripts.
+        </p>
+      )}
+
+      {/* Script source: my own scripts vs the built-in Cambridge-style library */}
+      <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase">
+        {(
+          [
+            { id: "mine", label: "My scripts" },
+            { id: "library", label: `Cambridge-style library (${SHADOWING_LIBRARY.length})` },
+          ] as const
+        ).map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => switchSource(opt.id)}
+            className={`px-3 py-1 border cursor-pointer transition-all ${
+              source === opt.id
+                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
+                : "bg-white dark:bg-zinc-950 text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+        {source === "library" && currentItem.part && (
+          <span className="text-zinc-500 normal-case ml-1">{LIBRARY_PART_LABELS[currentItem.part]}</span>
+        )}
       </div>
 
       {/* Item Selector Tabs (01. Work -> 05. Cue Card) */}
@@ -419,6 +688,7 @@ export function MasterMirrorGym({
                 setSpokenTranscript("");
                 setCoachAnalysis(null);
                 setWorkoutRep("absorb");
+      resetPractice();
               }}
               className={`px-3 py-1 font-mono text-[10px] uppercase border transition-all cursor-pointer whitespace-nowrap ${
                 activeIndex === idx
@@ -426,7 +696,8 @@ export function MasterMirrorGym({
                   : "border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400 bg-white dark:bg-zinc-950"
               }`}
             >
-              0{idx + 1}. {item.category}
+              {item.part ? `P${item.part} · ${item.topic}` : `0${idx + 1}. ${item.category}`}
+              {repository.itemStats?.[item.id]?.reps ? ` · ${repository.itemStats[item.id].reps}x` : ""}
             </button>
           ))}
         </div>
@@ -462,54 +733,238 @@ export function MasterMirrorGym({
         </p>
       </div>
 
-      {/* Step 1: Model Exemplar */}
-      <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
-        <div className="flex items-center gap-2">
-          <Volume2 className="w-3.5 h-3.5 text-zinc-500" />
-          <span className="font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider text-[11px]">
-            1. Model Answer
-          </span>
+      {/* Phase stepper: Listen -> Shadow -> Deliver */}
+      <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] uppercase">
+        <div className="flex items-center gap-1.5">
+          {PHASES.map((ph) => (
+            <button
+              key={ph.id}
+              type="button"
+              onClick={() => {
+                if (ph.id !== workoutRep) {
+                  shadowAbortRef.current = true;
+                  stopModel();
+                  stopListening();
+                  setWorkoutRep(ph.id);
+                }
+              }}
+              className={`px-3 py-1 border cursor-pointer transition-all ${
+                workoutRep === ph.id
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
+                  : "bg-white dark:bg-zinc-950 text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400"
+              }`}
+            >
+              {ph.label}
+            </button>
+          ))}
         </div>
+        <div className="flex items-center gap-2 text-zinc-500">
+          <span>Speed</span>
+          {RATES.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setModelRate(r)}
+              className={`px-2 py-0.5 border cursor-pointer ${
+                modelRate === r
+                  ? "border-zinc-900 dark:border-zinc-100 font-bold text-zinc-900 dark:text-zinc-100"
+                  : "border-zinc-200 dark:border-zinc-800"
+              }`}
+            >
+              {r}x
+            </button>
+          ))}
+          {itemStats && (
+            <span className="ml-1 normal-case">
+              {itemStats.reps} reps{itemStats.bestAccentScore ? ` · best ${Math.round(itemStats.bestAccentScore)}` : ""}
+            </span>
+          )}
+        </div>
+      </div>
 
-        {onSpeakText && (
-          <div className="flex items-center gap-2">
-            {isCoachSpeaking ? (
-              <button
-                type="button"
-                onClick={onStopSpeech}
-                className="px-3 py-1 border border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-mono text-[10px] uppercase font-bold cursor-pointer"
-              >
-                Stop Audio
-              </button>
-            ) : (
-              <>
+      {usingFallbackVoice && (
+        <div className="p-2 border border-amber-500/30 bg-amber-500/5 text-amber-800 dark:text-amber-300 text-[11px] font-mono">
+          RP model audio unavailable (check GEMINI_API_KEY / TTS access). Using your browser&apos;s voice instead, which may not be British RP.
+        </div>
+      )}
+
+      {/* Phase 1: Listen */}
+      {workoutRep === "absorb" && (
+        <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+            <span className="font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider text-[11px] flex items-center gap-2">
+              <Headphones className="w-3.5 h-3.5 text-zinc-500" />
+              Listen to the British RP model
+            </span>
+            <div className="flex items-center gap-2">
+              {isModelPlaying || modelLoading ? (
                 <button
                   type="button"
-                  onClick={() => onSpeakText(currentItem.upgradedScript, 0.85)}
-                  className="px-2.5 py-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 font-mono text-[10px] uppercase text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 cursor-pointer"
+                  onClick={stopModel}
+                  className="px-3 py-1 border border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-mono text-[10px] uppercase font-bold cursor-pointer"
                 >
-                  0.85x
+                  {modelLoading ? "Loading..." : "Stop Audio"}
                 </button>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => onSpeakText(currentItem.upgradedScript, 1.0)}
+                  onClick={() => playModel(modelRate)}
                   className="px-3 py-1 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-mono text-[10px] uppercase font-bold cursor-pointer shadow-xs flex items-center gap-1"
                 >
                   <Play className="w-3 h-3 fill-current" />
-                  <span>Play Model (1.0x)</span>
+                  <span>Play Model ({modelRate}x)</span>
                 </button>
-              </>
-            )}
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  stopModel();
+                  setWorkoutRep("shadow");
+                }}
+                className="px-3 py-1 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-mono text-[10px] uppercase cursor-pointer hover:border-zinc-500 flex items-center gap-1"
+              >
+                <span>Next: Shadow</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+          <p className="text-[11px] text-zinc-500 font-sans italic">
+            Listen without speaking. Notice the stressed words (underlined), where the voice pauses, and how the pitch rises and falls.
+          </p>
+          <p className="text-base sm:text-lg leading-relaxed font-serif text-zinc-900 dark:text-zinc-100">
+            {words.map((w, idx) => {
+              const cleanWord = w.toLowerCase().replace(/[^a-z0-9]/g, "");
+              const isStressed = currentItem.stressedWords.some((sw) => cleanWord.includes(sw.toLowerCase()));
+              return (
+                <span
+                  key={idx}
+                  className={`inline-block mr-1.5 ${
+                    isStressed ? "font-bold border-b border-amber-500" : "text-zinc-800 dark:text-zinc-200"
+                  }`}
+                >
+                  {w}
+                </span>
+              );
+            })}
+          </p>
+        </div>
+      )}
 
-      {/* Step 2: Live AI Coach Interactive Listening & Teleprompter */}
+      {/* Phase 2: Shadow, chunk by chunk */}
+      {workoutRep === "shadow" && (
+        <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+            <span className="font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider text-[11px] flex items-center gap-2">
+              <Repeat className="w-3.5 h-3.5 text-zinc-500" />
+              Shadow it, one breath at a time
+            </span>
+            <div className="flex items-center gap-2">
+              {shadowRunning ? (
+                <button
+                  type="button"
+                  onClick={stopShadowLoop}
+                  className="px-3 py-1 border border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-mono text-[10px] uppercase font-bold cursor-pointer"
+                >
+                  Stop
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => runShadowLoop(0)}
+                  className="px-3 py-1 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-mono text-[10px] uppercase font-bold cursor-pointer shadow-xs flex items-center gap-1"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Start Shadowing</span>
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={shadowRunning}
+                onClick={() => setWorkoutRep("deliver")}
+                className="px-3 py-1 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-mono text-[10px] uppercase cursor-pointer hover:border-zinc-500 disabled:opacity-40 flex items-center gap-1"
+              >
+                <span>Next: Deliver</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          {turnActive ? (
+            <div className="p-2.5 border border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 text-xs font-mono flex items-center gap-2 animate-pulse">
+              <Mic className="w-3.5 h-3.5" />
+              <span>YOUR TURN: repeat what you just heard, copying the rhythm and stress.</span>
+            </div>
+          ) : (
+            <p className="text-[11px] text-zinc-500 font-sans italic">
+              The model speaks a phrase, then it&apos;s your turn to copy it straight away. Match the music, not just the words.
+            </p>
+          )}
+
+          {micError && (
+            <div className="p-3 border border-rose-300 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 text-xs font-mono flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+              <span>{micError}</span>
+            </div>
+          )}
+
+          <ol className="space-y-1.5">
+            {cleanChunks.map((chunk, i) => (
+              <li
+                key={i}
+                className={`p-2.5 border flex flex-wrap items-center justify-between gap-2 transition-colors ${
+                  activeChunk === i
+                    ? "border-emerald-500 bg-emerald-500/10"
+                    : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40"
+                }`}
+              >
+                <span className="font-serif text-sm text-zinc-900 dark:text-zinc-100 flex-1 min-w-[12rem]">
+                  <span className="font-mono text-[10px] text-zinc-400 mr-2">{i + 1}</span>
+                  {chunk}
+                </span>
+                <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase">
+                  <button
+                    type="button"
+                    disabled={shadowRunning}
+                    onClick={() => playModel(modelRate, chunk)}
+                    className="px-2 py-0.5 border border-zinc-300 dark:border-zinc-700 cursor-pointer hover:border-zinc-500 disabled:opacity-40 flex items-center gap-1"
+                  >
+                    <Volume2 className="w-3 h-3" />
+                    <span>Model</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={shadowRunning}
+                    onClick={() => runShadowLoop(i, true)}
+                    className="px-2 py-0.5 border border-zinc-300 dark:border-zinc-700 cursor-pointer hover:border-zinc-500 disabled:opacity-40 flex items-center gap-1"
+                  >
+                    <Repeat className="w-3 h-3" />
+                    <span>Repeat</span>
+                  </button>
+                  {chunkTakes[i] && (
+                    <button
+                      type="button"
+                      disabled={shadowRunning}
+                      onClick={() => playUrl(chunkTakes[i])}
+                      className="px-2 py-0.5 border border-emerald-500/50 text-emerald-700 dark:text-emerald-400 cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                    >
+                      <Play className="w-3 h-3" />
+                      <span>You</span>
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Phase 3: Deliver, with live teleprompter */}
+      {workoutRep === "deliver" && (
       <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4">
         <div className="flex flex-wrap items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500 pb-2 border-b border-zinc-200 dark:border-zinc-800 gap-2">
           <div className="flex items-center gap-2">
             <span className="font-bold text-zinc-900 dark:text-zinc-100">
-              2. Deliver & Check Feedback
+              Deliver the full answer
             </span>
             {isListening && (
               <span className="px-1.5 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/20 flex items-center gap-1 animate-pulse">
@@ -530,6 +985,7 @@ export function MasterMirrorGym({
               </span>
             </div>
 
+            {currentItem.originalRawSpoken && (
             <button
               type="button"
               onClick={() => setShowOriginalComparison(!showOriginalComparison)}
@@ -537,6 +993,7 @@ export function MasterMirrorGym({
             >
               {showOriginalComparison ? "Hide Original Take" : "View Original Take"}
             </button>
+            )}
           </div>
         </div>
 
@@ -671,11 +1128,12 @@ export function MasterMirrorGym({
           })}
         </p>
       </div>
+      )}
 
       {/* ============================================================== */}
       {/* AI COACH DIAGNOSTIC FEEDBACK & MISTAKE FIXING CONSOLE */}
       {/* ============================================================== */}
-      {isAnalyzing && (
+      {workoutRep === "deliver" && isAnalyzing && (
         <div className="p-6 border border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-900 text-center font-mono space-y-3 animate-in fade-in">
           <div className="w-8 h-8 mx-auto border-2 border-zinc-900 dark:border-zinc-100 border-t-transparent animate-spin" />
           <div className="text-xs font-bold uppercase tracking-widest text-zinc-900 dark:text-zinc-100">
@@ -687,7 +1145,7 @@ export function MasterMirrorGym({
         </div>
       )}
 
-      {coachAnalysis && (
+      {workoutRep === "deliver" && coachAnalysis && (
         <div className="p-5 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 space-y-4 animate-in fade-in shadow-md">
           {/* Diagnostic Header */}
           <div className="flex flex-wrap items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3 gap-2 font-mono text-xs">
@@ -710,6 +1168,66 @@ export function MasterMirrorGym({
               </span>
             </div>
           </div>
+
+          {/* British RP accent comparison */}
+          {coachAnalysis.accent && (
+            <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 space-y-2.5">
+              <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold text-zinc-700 dark:text-zinc-300">
+                <span>Accent match vs British RP</span>
+                <span className="text-sm">{Math.round(coachAnalysis.accent.overall)}/100</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 font-mono text-[10px] uppercase text-zinc-500">
+                {(["sounds", "stress", "rhythm", "intonation"] as const).map((k) => (
+                  <div key={k} className="space-y-0.5">
+                    <div className="flex justify-between">
+                      <span>{k}</span>
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        {Math.round(coachAnalysis.accent![k])}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-zinc-200 dark:bg-zinc-800">
+                      <div
+                        className={`h-full ${accentBarColor(coachAnalysis.accent![k])}`}
+                        style={{ width: `${Math.max(0, Math.min(100, coachAnalysis.accent![k]))}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] font-sans text-zinc-700 dark:text-zinc-300">
+                <strong className="font-mono text-[10px] uppercase">Next rep, focus on: </strong>
+                {coachAnalysis.accent.focusTip}
+              </p>
+            </div>
+          )}
+
+          {/* A/B: model vs your take */}
+          {takeUrl && (
+            <div className="p-3 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase">
+              <span className="font-bold text-zinc-500">Compare:</span>
+              <button
+                type="button"
+                onClick={() => playModel(1)}
+                className="px-2.5 py-1 border border-zinc-300 dark:border-zinc-700 cursor-pointer hover:border-zinc-500 flex items-center gap-1"
+              >
+                <Volume2 className="w-3 h-3" />
+                <span>Model</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => playUrl(takeUrl)}
+                className="px-2.5 py-1 border border-emerald-500/50 text-emerald-700 dark:text-emerald-400 cursor-pointer flex items-center gap-1"
+              >
+                <Play className="w-3 h-3" />
+                <span>Your take</span>
+              </button>
+              {isModelPlaying && (
+                <button type="button" onClick={stopModel} className="text-rose-600 cursor-pointer">
+                  Stop
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Coach Spoken Assessment */}
           <div className="p-3.5 border border-amber-500/30 bg-amber-500/5 space-y-2">
@@ -756,10 +1274,10 @@ export function MasterMirrorGym({
                       <span className="px-1.5 py-0.2 bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 uppercase font-bold">
                         {m.type}
                       </span>
-                      {onSpeakText && (
+                      {(
                         <button
                           type="button"
-                          onClick={() => onSpeakText(m.targetPhrase, 0.9)}
+                          onClick={() => playModel(0.9, m.targetPhrase)}
                           className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1 cursor-pointer font-mono text-[10px]"
                           title="Listen to model articulation"
                         >
@@ -788,6 +1306,12 @@ export function MasterMirrorGym({
                       <strong className="text-zinc-900 dark:text-zinc-100 font-mono text-[10px] uppercase">Correction: </strong>
                       {m.coachCorrection}
                     </p>
+                    {m.phoneticTip && (
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-snug">
+                        <strong className="text-zinc-900 dark:text-zinc-100 font-mono text-[10px] uppercase">Sound / stress: </strong>
+                        <span className="font-mono">{m.phoneticTip}</span>
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -805,27 +1329,16 @@ export function MasterMirrorGym({
               <span>Retry Rep</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleLogRep}
-              className={`px-4 py-2 font-mono font-bold text-xs uppercase cursor-pointer flex items-center gap-1.5 border ${
+            <span
+              className={`px-3 py-1.5 border font-bold text-[11px] uppercase flex items-center gap-1.5 ${
                 repJustLogged
                   ? "bg-emerald-900 text-emerald-100 border-emerald-700"
-                  : "bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100"
+                  : "border-zinc-200 dark:border-zinc-800 text-zinc-500"
               }`}
             >
-              {repJustLogged ? (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Rep Logged!</span>
-                </>
-              ) : (
-                <>
-                  <Award className="w-3.5 h-3.5" />
-                  <span>Save Practice Rep</span>
-                </>
-              )}
-            </button>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              {repJustLogged ? "Rep logged" : "Reps log automatically"}
+            </span>
           </div>
         </div>
       )}
@@ -847,10 +1360,10 @@ export function MasterMirrorGym({
                 <span className="font-serif font-bold text-xs text-zinc-900 dark:text-zinc-100">
                   {colloc.phrase}
                 </span>
-                {onSpeakText && (
+                {(
                   <button
                     type="button"
-                    onClick={() => onSpeakText(colloc.phrase, 0.9)}
+                    onClick={() => playModel(0.9, colloc.phrase)}
                     className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
                   >
                     <Volume2 className="w-3 h-3" />
@@ -862,58 +1375,6 @@ export function MasterMirrorGym({
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Step 3: Repetition Logging & Workout Cycle Tracker */}
-      <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase text-zinc-400 font-bold mr-1">Mode:</span>
-          {(["absorb", "shadow", "deliver"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => {
-                setWorkoutRep(mode);
-                if (mode === "shadow" || mode === "deliver") {
-                  if (!isListening) startListening();
-                } else {
-                  stopListening();
-                }
-              }}
-              className={`px-2.5 py-1 text-[10px] uppercase border cursor-pointer transition-all ${
-                workoutRep === mode
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
-                  : "bg-white dark:bg-zinc-950 text-zinc-500 border-zinc-200 dark:border-zinc-800"
-              }`}
-            >
-              {mode === "absorb" && "1. Listen"}
-              {mode === "shadow" && "2. Shadow"}
-              {mode === "deliver" && "3. Deliver"}
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={handleLogRep}
-          className={`px-4 py-2 text-xs font-mono font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 border ${
-            repJustLogged
-              ? "bg-emerald-900 text-emerald-100 border-emerald-700"
-              : "bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100"
-          }`}
-        >
-          {repJustLogged ? (
-            <>
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Rep Logged!</span>
-            </>
-          ) : (
-            <>
-              <Award className="w-3.5 h-3.5" />
-              <span>Save Practice Rep</span>
-            </>
-          )}
-        </button>
       </div>
     </div>
   );

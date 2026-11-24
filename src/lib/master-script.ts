@@ -17,6 +17,14 @@ export interface ScriptItem {
   stressedWords: string[]; // Key tonic stress words
   targetCollocations: TargetCollocation[];
   masterCadenceWpm: number; // e.g. 130
+  part?: 1 | 2 | 3; // IELTS Speaking part (library scripts)
+  topic?: string; // Short topic label (library scripts)
+}
+
+export interface ItemStats {
+  reps: number;
+  bestAccentScore: number; // 0-100, 0 if never scored
+  lastPracticedAt: number;
 }
 
 export interface MasterScriptRepository {
@@ -27,7 +35,10 @@ export interface MasterScriptRepository {
   createdAt: number;
   lastPracticedAt: number;
   totalPracticeCount: number; // Increments with each repetition session
-  streakReps: number;
+  streakReps: number; // Legacy counter, kept for backwards compatibility
+  dayStreak?: number; // Consecutive calendar days with at least one rep
+  lastPracticeDay?: string; // YYYY-MM-DD (local)
+  itemStats?: Record<string, ItemStats>; // Keyed by ScriptItem.id; survives script upgrades
   items: ScriptItem[];
 }
 
@@ -299,18 +310,47 @@ export function saveMasterScript(repository: MasterScriptRepository): void {
   listeners.forEach((listener) => listener());
 }
 
+function localDay(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 /**
- * Logs a completed repetition rep, incrementing totalPracticeCount and updating streak.
+ * Logs a completed repetition rep: bumps totals, the per-item stats, and the day streak.
+ * @param itemId   the script item practised
+ * @param accentScore optional 0-100 accent score from the coach
  */
-export function logRepetitionCompleted(): void {
+export function logRepetitionCompleted(itemId?: string, accentScore?: number): void {
   const current = getMasterScriptSnapshot();
-  const updated: MasterScriptRepository = {
+  const now = new Date();
+  const today = localDay(now);
+  const yesterday = localDay(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+
+  let dayStreak = current.dayStreak ?? 0;
+  if (current.lastPracticeDay !== today) {
+    dayStreak = current.lastPracticeDay === yesterday ? dayStreak + 1 : 1;
+  }
+
+  const itemStats = { ...(current.itemStats ?? {}) };
+  if (itemId) {
+    const prev = itemStats[itemId] ?? { reps: 0, bestAccentScore: 0, lastPracticedAt: 0 };
+    itemStats[itemId] = {
+      reps: prev.reps + 1,
+      bestAccentScore: Math.max(prev.bestAccentScore, accentScore ?? 0),
+      lastPracticedAt: now.getTime(),
+    };
+  }
+
+  saveMasterScript({
     ...current,
     totalPracticeCount: current.totalPracticeCount + 1,
     streakReps: current.streakReps + 1,
-    lastPracticedAt: Date.now(),
-  };
-  saveMasterScript(updated);
+    dayStreak,
+    lastPracticeDay: today,
+    itemStats,
+    lastPracticedAt: now.getTime(),
+  });
 }
 
 /**
