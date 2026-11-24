@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   scriptVault: "vocal_lab_master_script_v2",
   testHistory: "vocal_lab_test_history_v2",
   attempts: "vocal_lab_attempts_v1",
+  preferences: "vocal_lab_preferences_v1",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

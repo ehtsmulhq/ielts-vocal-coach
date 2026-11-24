@@ -45,7 +45,8 @@ import { LessonCard } from "@/components/LessonCard";
 import { TranscriptFeed } from "@/components/TranscriptFeed";
 import { FeedbackReport } from "@/components/FeedbackReport";
 import { LatencyHUD } from "@/components/LatencyHUD";
-import { MasterMirrorGym } from "@/components/MasterMirrorGym";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CandidateGrillModal } from "@/components/CandidateGrillModal";
 import {
   ArrowRight,
@@ -57,8 +58,9 @@ import {
   Trash2,
 } from "lucide-react";
 
-export default function Home() {
-  const [view, setView] = useState<"setup" | "session" | "mirrorgym" | "upgrading" | "feedback">("mirrorgym");
+export default function CapturePage() {
+  const router = useRouter();
+  const [view, setView] = useState<"setup" | "session" | "upgrading" | "feedback">("setup");
   const [band, setBand] = useState<TargetBand>("7.5");
   const [activeModel, setActiveModel] = useState<string>(DEFAULT_LIVE_MODEL);
   const profile = useSyncExternalStore(
@@ -608,10 +610,13 @@ export default function Home() {
       <header className="h-14 flex-shrink-0 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-30 font-mono">
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
-            <span className="font-serif font-bold text-sm sm:text-base tracking-tight text-zinc-900 dark:text-zinc-100">
-              ACCENT SHADOWING GYM
-            </span>
-            <span className="text-[10px] text-zinc-400 hidden sm:inline">British RP</span>
+            <Link
+              href="/"
+              className="font-serif font-bold text-sm sm:text-base tracking-tight text-zinc-900 dark:text-zinc-100 hover:underline underline-offset-4"
+            >
+              ← Accent Shadowing Gym
+            </Link>
+            <span className="text-[11px] text-zinc-500 hidden sm:inline">Capture</span>
           </div>
 
           {/* Stepper in Header for Live Session */}
@@ -639,12 +644,6 @@ export default function Home() {
             </div>
           )}
 
-          {view === "mirrorgym" && (
-            <div className="flex items-center gap-2 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span className="tracking-wider hidden sm:inline">Shadowing</span>
-            </div>
-          )}
         </div>
 
         {/* Right header controls */}
@@ -680,16 +679,6 @@ export default function Home() {
             </>
           )}
 
-          {view === "mirrorgym" && (
-            <button
-              type="button"
-              onClick={() => setView("setup")}
-              className="flex items-center gap-1.5 px-3.5 py-1 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-mono text-xs uppercase font-bold transition-all cursor-pointer border border-zinc-900 dark:border-zinc-100"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>CAPTURE NEW SCRIPTS</span>
-            </button>
-          )}
 
           {view === "feedback" && (
             <button
@@ -721,7 +710,7 @@ export default function Home() {
           <div className="h-full w-full overflow-y-auto flex flex-col items-center justify-start sm:justify-center p-2 sm:p-4">
             <SetupCard
               onStartHotSeat={handleStartSession}
-              onEnterMirrorGym={() => setView("mirrorgym")}
+              onEnterMirrorGym={() => router.push("/library")}
               onWipeAllData={handleWipeAllData}
               onOpenGrill={() => setIsGrillManuallyOpen(true)}
               masterPracticeCount={masterScript.totalPracticeCount}
@@ -883,24 +872,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* View 4: Master Script Mirror Gym (Acoustic Apprenticeship) */}
-        {view === "mirrorgym" && (
-          <div className="h-full w-full overflow-hidden p-2 sm:p-4">
-            <div className="h-full max-w-4xl mx-auto bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-5 shadow-xs flex flex-col overflow-hidden">
-              <MasterMirrorGym
-                repository={masterScript}
-                onSpeakText={handleSpeakCoachText}
-                onStopSpeech={handleStopCoachText}
-                isCoachSpeaking={isCoachTtsSpeaking}
-                studentWordCount={studentWordCount}
-                onStartHotSeatRetake={() => {
-                  handleRestart();
-                }}
-              />
-            </div>
-          </div>
-        )}
-
         {/* View 5: Diagnostic Feedback & Daily Progress */}
         {view === "feedback" && (
           <div className="h-full w-full overflow-y-auto p-2 scrollbar-thin">
@@ -923,7 +894,7 @@ export default function Home() {
                 dayNumber={testHistory.length}
                 noSpeechDetected={noSpeechDetected}
                 onRestart={handleRestart}
-                onEnterMirrorGym={() => setView("mirrorgym")}
+                onEnterMirrorGym={() => router.push("/library")}
               />
             ) : (
               <div className="text-center p-8 font-mono text-xs text-zinc-500">

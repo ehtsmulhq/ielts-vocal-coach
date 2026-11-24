@@ -69,14 +69,17 @@ If Gemini TTS is unavailable the gym falls back to your browser's speech voice a
 
 ## Project layout
 
-- `src/components/MasterMirrorGym.tsx`: Listen / Shadow / Deliver gym
+- Routes: `/` (Today), `/library`, `/practice/[scriptId]` (Listen, Shadow, Deliver, Feedback), `/capture` (interview that creates personal scripts)
+- `src/features/practice/`: practice hooks (`useModelPlayer`, `useRecorder`, `useShadowLoop`, `useCoach`) and panels
+- `src/features/{today,library,shell}/`: Today and Library screens, app shell with nav and theme toggle
+- `src/ui/primitives.tsx`: design-system primitives; colour tokens live in `src/app/globals.css`
 - `src/app/api/model-audio`, `mirror-coach`, `upgrade-script`, `token`, `feedback`: server routes
 - `src/lib/model-audio.ts`: RP clip fetch + IndexedDB cache
 - `src/lib/master-script.ts`: script vault, per-script stats, day streak (`localStorage`)
 - `src/domain/`: pure logic and shared API contracts (Zod), unit-tested
 - `src/storage/`: versioned local storage with migrations, attempts history, backup export/import, wipe
 - `src/server/`: server-only Gemini client, env config and allowlists, request guard (origin, size, rate limit)
-- `src/app/page.tsx`: app shell; `SetupCard` and `CandidateGrillModal` handle script capture
+- `src/app/capture/page.tsx`: the capture interview (being split up in Phase 3); `SetupCard` and `CandidateGrillModal` live in `src/components/`
 
 More detail: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), [CONCEPTS.md](CONCEPTS.md), [docs/](docs).
 
