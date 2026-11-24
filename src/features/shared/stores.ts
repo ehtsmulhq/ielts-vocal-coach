@@ -9,6 +9,7 @@ import {
 import { subscribeProfile, getProfileSnapshot, getProfileServerSnapshot } from "@/lib/profile";
 import { subscribeTestHistory, getTestHistorySnapshot, getTestHistoryServerSnapshot } from "@/lib/test-history";
 import { subscribeAttempts, getAttemptsSnapshot, getAttemptsServerSnapshot } from "@/storage/attempts";
+import { subscribeCapture, getCaptureSnapshot, getCaptureServerSnapshot } from "@/storage/capture";
 import {
   subscribePreferences,
   getPreferencesSnapshot,
@@ -36,6 +37,10 @@ export function useHasCaptured(): boolean {
 
 export function useAttempts() {
   return useSyncExternalStore(subscribeAttempts, getAttemptsSnapshot, getAttemptsServerSnapshot);
+}
+
+export function useCaptureStore() {
+  return useSyncExternalStore(subscribeCapture, getCaptureSnapshot, getCaptureServerSnapshot);
 }
 
 export function usePreferences() {

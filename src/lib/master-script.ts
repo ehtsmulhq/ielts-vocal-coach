@@ -2,6 +2,7 @@ import { CandidateProfile, DEFAULT_PROFILE } from "./types";
 import { createStore } from "@/storage/store";
 import { STORAGE_KEYS } from "@/storage/registry";
 import { applyRep, localDay, nextDayStreak, type ItemStats } from "@/domain/stats";
+import { mergeAcceptedScripts } from "@/domain/capture";
 
 export type { ItemStats };
 
@@ -283,6 +284,31 @@ export function logRepetitionCompleted(itemId?: string, accentScore?: number): v
       lastPracticedAt: now.getTime(),
     };
   });
+}
+
+/**
+ * Rebuilds the generic starter scripts from an updated profile. Personal
+ * scripts and practice stats are left alone (starter ids are stable, so their
+ * stats carry over).
+ */
+export function refreshStarterScripts(profile: CandidateProfile): void {
+  const fresh = createDefaultMasterRepository(profile).items;
+  const byId = new Map(fresh.map((s) => [s.id, s]));
+  vaultStore.update((current) => ({
+    ...current,
+    candidateName: profile.fullName,
+    preferredName: profile.preferredName,
+    items: current.items.map((s) => byId.get(s.id) ?? s),
+  }));
+}
+
+/** Adds accepted capture scripts (see `mergeAcceptedScripts`) and records the learner's band. */
+export function addPersonalScripts(accepted: ScriptItem[], targetBand?: string): void {
+  vaultStore.update((current) => ({
+    ...current,
+    targetBand: targetBand ?? current.targetBand,
+    items: mergeAcceptedScripts(current.items, accepted, current.itemStats),
+  }));
 }
 
 /** Resets the vault to starter scripts built from `profile`. */

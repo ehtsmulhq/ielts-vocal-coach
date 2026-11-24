@@ -14,7 +14,7 @@ Reps, per-script best scores and a daily streak are tracked locally. Nothing lea
 
 ### Where the scripts come from
 
-The **Cambridge-style library** has 12 original model answers (Parts 1, 2 and 3) on themes that recur in Cambridge IELTS Speaking tests: food, technology, weather, hobbies, buildings, advice, quiet places, health habits, heritage, AI, the environment and the arts. They are written for this app, not copied from any book (`src/lib/shadowing-library.ts`). The gym also ships with starter scripts built from your profile. For scripts about **your** life, use **Capture new scripts**: a short unscripted Cambridge-style interview (Parts 1-3) with a live Gemini examiner. Your answers are upgraded into Band 8.5+ spoken English (with breath marks `|`, stressed words and collocations) and become your shadowing scripts. The interview also produces an IELTS band report.
+The **Cambridge-style library** has 12 original model answers (Parts 1, 2 and 3) on themes that recur in Cambridge IELTS Speaking tests: food, technology, weather, hobbies, buildings, advice, quiet places, health habits, heritage, AI, the environment and the arts. They are written for this app, not copied from any book (`src/lib/shadowing-library.ts`). The gym also ships with starter scripts built from your profile. For scripts about **your** life, use **Capture new scripts**: a short unscripted Cambridge-style interview (Parts 1-3) with a live Gemini examiner. Your answers are rewritten into natural high-band spoken English (with breath groups, stressed words and collocations); you choose which to keep, and nothing you already have is replaced. An unfinished interview is saved, so you can still get a report from it later. The interview also produces an IELTS band report.
 
 ## Tech stack
 
@@ -69,7 +69,8 @@ If Gemini TTS is unavailable the gym falls back to your browser's speech voice a
 
 ## Project layout
 
-- Routes: `/` (Today), `/library`, `/practice/[scriptId]` (Listen, Shadow, Deliver, Feedback), `/capture` (interview that creates personal scripts)
+- Routes: `/` (Today), `/library`, `/practice/[scriptId]` (Listen, Shadow, Deliver, Feedback), `/capture` (live interview) and `/capture/report` (choose which new scripts to keep, plus the band report)
+- `src/features/capture/`: `useCaptureSession` (reducer-driven live interview), grading pipeline, setup/live/report screens
 - `src/features/practice/`: practice hooks (`useModelPlayer`, `useRecorder`, `useShadowLoop`, `useCoach`) and panels
 - `src/features/{today,library,shell}/`: Today and Library screens, app shell with nav and theme toggle
 - `src/ui/primitives.tsx`: design-system primitives; colour tokens live in `src/app/globals.css`
@@ -79,7 +80,7 @@ If Gemini TTS is unavailable the gym falls back to your browser's speech voice a
 - `src/domain/`: pure logic and shared API contracts (Zod), unit-tested
 - `src/storage/`: versioned local storage with migrations, attempts history, backup export/import, wipe
 - `src/server/`: server-only Gemini client, env config and allowlists, request guard (origin, size, rate limit)
-- `src/app/capture/page.tsx`: the capture interview (being split up in Phase 3); `SetupCard` and `CandidateGrillModal` live in `src/components/`
+- `src/components/`: live-interview widgets (`VoiceOrb`, `LessonCard`, `TranscriptFeed`, `LatencyHUD`), `FeedbackReport` and the profile intake `CandidateGrillModal`
 
 More detail: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), [CONCEPTS.md](CONCEPTS.md), [docs/](docs).
 

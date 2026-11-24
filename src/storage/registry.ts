@@ -8,6 +8,7 @@ export const STORAGE_KEYS = {
   testHistory: "vocal_lab_test_history_v2",
   attempts: "vocal_lab_attempts_v1",
   preferences: "vocal_lab_preferences_v1",
+  capture: "vocal_lab_capture_v1",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
