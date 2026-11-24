@@ -51,6 +51,7 @@ Open http://localhost:3000 and allow microphone access. Use headphones so the mo
 | `TTS_VOICE` | Prebuilt voice for the model clip | `Puck` |
 | `LIVE_MODEL`, `LIVE_VOICE` | Live examiner model and voice | see `.env.example` |
 | `TEXT_MODELS` | Text/coaching models, tried in order | see `.env.example` |
+| `ALLOWED_ORIGINS` | Extra origins allowed to call the API | none (same-origin only) |
 
 If Gemini TTS is unavailable the gym falls back to your browser's speech voice and shows a notice. That voice may not be British RP.
 
@@ -62,6 +63,9 @@ If Gemini TTS is unavailable the gym falls back to your browser's speech voice a
 | `npm run build` | Production build and type check |
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript without emitting |
+| `npm run test` | Unit tests (Vitest) |
+| `npm run check` | Lint, typecheck and tests together (CI also runs the build) |
 
 ## Project layout
 
@@ -69,6 +73,9 @@ If Gemini TTS is unavailable the gym falls back to your browser's speech voice a
 - `src/app/api/model-audio`, `mirror-coach`, `upgrade-script`, `token`, `feedback`: server routes
 - `src/lib/model-audio.ts`: RP clip fetch + IndexedDB cache
 - `src/lib/master-script.ts`: script vault, per-script stats, day streak (`localStorage`)
+- `src/domain/`: pure logic and shared API contracts (Zod), unit-tested
+- `src/storage/`: versioned local storage with migrations, attempts history, backup export/import, wipe
+- `src/server/`: server-only Gemini client, env config and allowlists, request guard (origin, size, rate limit)
 - `src/app/page.tsx`: app shell; `SetupCard` and `CandidateGrillModal` handle script capture
 
 More detail: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), [CONCEPTS.md](CONCEPTS.md), [docs/](docs).

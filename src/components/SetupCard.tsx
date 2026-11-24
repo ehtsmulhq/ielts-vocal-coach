@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { CandidateProfile, TargetBand } from "@/lib/types";
-import { LIVE_MODELS, LIVE_VOICES } from "@/lib/models";
+import { LIVE_MODELS, LIVE_VOICES, DEFAULT_LIVE_MODEL, DEFAULT_VOICE } from "@/lib/models";
 import { CURATED_THEMES } from "@/lib/prompts";
 import { CAMBRIDGE_TEST_MODULES } from "@/lib/cambridge-materials";
 import type { HotSeatSessionRecord } from "@/lib/test-history";
@@ -60,8 +60,8 @@ export function SetupCard({
   onProfileChange,
 }: SetupCardProps) {
   const [band, setBand] = useState<TargetBand>(profile.targetBand || "7.5");
-  const [selectedModel, setSelectedModel] = useState(LIVE_MODELS[0].id);
-  const [selectedVoice, setSelectedVoice] = useState(LIVE_VOICES[0].id);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_LIVE_MODEL);
+  const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_VOICE);
   const [customTopic, setCustomTopic] = useState("");
   const [selectedCambridgeId, setSelectedCambridgeId] = useState<string>("cam-19-test-1");
   const [selectedSceneId, setSelectedSceneId] = useState<string>("");

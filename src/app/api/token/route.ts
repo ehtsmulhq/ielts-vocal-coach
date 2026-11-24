@@ -1,19 +1,22 @@
 import { GoogleGenAI } from "@google/genai";
-import { LIVE_MODEL, LIVE_VOICE } from "@/lib/models";
+import { LIVE_VOICE, getApiKey, resolveLiveModel, resolveVoice } from "@/server/config";
+import { guardJson, LIMITS } from "@/server/guard";
+import { handleRouteError, NotConfiguredError } from "@/server/errors";
+import { TokenRequestSchema } from "@/domain/contracts";
 
 /**
  * Issues a single-use ephemeral token so the browser can open a Live API
- * WebSocket without ever seeing the real API key.
+ * WebSocket without ever seeing the real API key. Model and voice are
+ * allowlisted server-side; anything else falls back to the configured default.
  */
 export async function POST(request: Request) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return Response.json({ error: "GEMINI_API_KEY is not set in .env.local" }, { status: 500 });
-  }
+  const guarded = await guardJson(request, { route: "token", ...LIMITS.token }, TokenRequestSchema);
+  if (!guarded.ok) return guarded.response;
   try {
-    const body = (await request.json().catch(() => ({}))) as { model?: string; voice?: string };
-    const chosenModel = body.model?.trim() || LIVE_MODEL;
-    const chosenVoice = body.voice?.trim() || LIVE_VOICE;
+    const apiKey = getApiKey();
+    if (!apiKey) throw new NotConfiguredError();
+    const model = resolveLiveModel(guarded.data.model);
+    const voice = resolveVoice(guarded.data.voice, LIVE_VOICE);
 
     const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1alpha" } });
     const now = Date.now();
@@ -25,9 +28,8 @@ export async function POST(request: Request) {
         httpOptions: { apiVersion: "v1alpha" },
       },
     });
-    return Response.json({ token: token.name, model: chosenModel, voice: chosenVoice });
+    return Response.json({ token: token.name, model, voice });
   } catch (err) {
-    console.error("[api/token]", err);
-    return Response.json({ error: (err as Error).message }, { status: 500 });
+    return handleRouteError("token", err);
   }
 }

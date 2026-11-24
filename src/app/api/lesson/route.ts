@@ -1,14 +1,15 @@
-import { generateJson } from "@/lib/gemini";
+import { generateJson } from "@/server/gemini";
+import { guardJson, LIMITS } from "@/server/guard";
+import { handleRouteError } from "@/server/errors";
+import { LessonRequestSchema } from "@/domain/contracts";
 import { lessonPrompt, lessonSchema } from "@/lib/prompts";
-import type { Lesson, LessonRequest, TargetBand } from "@/lib/types";
+import type { Lesson, LessonRequest } from "@/lib/types";
 import {
   MOST_ASKED_PART2_SCENES,
   REAL_PART1_CLUSTERS,
   getPart2Scene,
 } from "@/lib/ielts-question-knowledge-graph";
 import { CAMBRIDGE_TEST_MODULES } from "@/lib/cambridge-materials";
-
-const BANDS: TargetBand[] = ["5.5", "6.5", "7.5"];
 
 function sanitizePart1Questions(questions: string[]): string[] {
   const fallback = REAL_PART1_CLUSTERS[0].standardQuestions;
@@ -36,14 +37,18 @@ function sanitizePart1Questions(questions: string[]): string[] {
   });
 }
 
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
+  const guarded = await guardJson(request, { route: "lesson", ...LIMITS.lesson }, LessonRequestSchema);
+  if (!guarded.ok) return guarded.response;
   try {
-    const body = (await request.json().catch(() => ({}))) as Partial<LessonRequest>;
-    const band = BANDS.includes(body.band as TargetBand) ? (body.band as TargetBand) : "7.5";
-    const topic = typeof body.topic === "string" ? body.topic.trim().slice(0, 120) : undefined;
-    const focusArea = body.focusArea;
-    const cambridgeTestId = typeof body.cambridgeTestId === "string" ? body.cambridgeTestId : undefined;
-    const sceneId = typeof body.sceneId === "string" ? body.sceneId : undefined;
+    const body = guarded.data;
+    const band = body.band;
+    const topic = body.topic?.trim().slice(0, 120) || undefined;
+    const focusArea = body.focusArea as LessonRequest["focusArea"];
+    const cambridgeTestId = body.cambridgeTestId;
+    const sceneId = body.sceneId;
 
     // 1. Direct Knowledge Graph resolution: User selected a specific high-frequency Part 2 Scene
     if (sceneId) {
@@ -129,10 +134,11 @@ export async function POST(request: Request) {
 
     // 4. Default: Generate via Gemini strictly bound to Cambridge IELTS rules
     try {
-      const { data, model } = await generateJson<Lesson>(
-        lessonPrompt({ band, topic, focusArea, cambridgeTestId }),
-        lessonSchema
-      );
+      const { data, model } = await generateJson<Lesson>({
+        contents: lessonPrompt({ band, topic, focusArea, cambridgeTestId }),
+        schema: lessonSchema,
+        mode: "creative",
+      });
       if (data?.hotSeatTest?.part1Questions && Array.isArray(data.hotSeatTest.part1Questions)) {
         data.hotSeatTest.part1Questions = sanitizePart1Questions(data.hotSeatTest.part1Questions);
       }
@@ -156,7 +162,6 @@ export async function POST(request: Request) {
       return Response.json({ lesson: fallbackLesson, model: "knowledge-graph-fallback" });
     }
   } catch (err) {
-    console.error("[api/lesson]", err);
-    return Response.json({ error: (err as Error).message }, { status: 500 });
+    return handleRouteError("lesson", err);
   }
 }

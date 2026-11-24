@@ -1,31 +1,12 @@
 import { CandidateProfile, DEFAULT_PROFILE } from "./types";
+import { createStore } from "@/storage/store";
+import { STORAGE_KEYS } from "@/storage/registry";
+import { applyRep, localDay, nextDayStreak, type ItemStats } from "@/domain/stats";
 
-export interface TargetCollocation {
-  phrase: string;
-  meaning: string;
-  phoneticTip: string;
-}
+export type { ItemStats };
 
-export interface ScriptItem {
-  id: string; // e.g. "canonical-work", "canonical-hometown", "canonical-habits", "canonical-cuecard"
-  category: "work" | "hometown" | "living" | "habits" | "cuecard" | "abstract";
-  title: string;
-  question: string;
-  originalRawSpoken: string; // Captured from Take 1
-  upgradedScript: string; // Band 8.5+ native spoken rewrite of candidate's thoughts
-  thoughtChunks: string[]; // Rhythmic breath units ending with '|'
-  stressedWords: string[]; // Key tonic stress words
-  targetCollocations: TargetCollocation[];
-  masterCadenceWpm: number; // e.g. 130
-  part?: 1 | 2 | 3; // IELTS Speaking part (library scripts)
-  topic?: string; // Short topic label (library scripts)
-}
-
-export interface ItemStats {
-  reps: number;
-  bestAccentScore: number; // 0-100, 0 if never scored
-  lastPracticedAt: number;
-}
+export type { ScriptItem, TargetCollocation } from "@/domain/contracts";
+import type { ScriptItem } from "@/domain/contracts";
 
 export interface MasterScriptRepository {
   id: string;
@@ -41,8 +22,6 @@ export interface MasterScriptRepository {
   itemStats?: Record<string, ItemStats>; // Keyed by ScriptItem.id; survives script upgrades
   items: ScriptItem[];
 }
-
-const MASTER_SCRIPT_STORAGE_KEY = "vocal_lab_master_script_v2";
 
 /**
  * Generates an initial canonical starter vault based on candidate profile.
@@ -243,121 +222,72 @@ export function createDefaultMasterRepository(profile: CandidateProfile = DEFAUL
   };
 }
 
-let cachedRepository: MasterScriptRepository | null = null;
-const listeners = new Set<() => void>();
-
-/**
- * Loads the master script repository from localStorage.
- */
-export function loadMasterScript(): MasterScriptRepository {
-  if (typeof window === "undefined") {
-    return createDefaultMasterRepository();
-  }
-
-  try {
-    const raw = window.localStorage.getItem(MASTER_SCRIPT_STORAGE_KEY);
-    if (!raw) {
-      const initial = createDefaultMasterRepository();
-      saveMasterScript(initial);
-      return initial;
-    }
-    const parsed = JSON.parse(raw) as MasterScriptRepository;
-    return parsed;
-  } catch (err) {
-    console.warn("[master-script] Error reading from localStorage, using default:", err);
-    return createDefaultMasterRepository();
-  }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
- * useSyncExternalStore subscription for tear-free, hydration-safe reactive script updates.
+ * Normalises any stored vault (legacy raw JSON = version 0, or envelope v1).
+ * Unknown or broken data falls back to the starter vault rather than crashing.
  */
-export function subscribeMasterScript(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
+export function migrateScriptVault(data: unknown): MasterScriptRepository {
+  if (!isRecord(data) || !Array.isArray(data.items)) return createDefaultMasterRepository();
+  const fallback = createDefaultMasterRepository();
+  const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
+  return {
+    ...fallback,
+    ...(data as Partial<MasterScriptRepository>),
+    totalPracticeCount: num(data.totalPracticeCount, 0),
+    streakReps: num(data.streakReps, 0),
+    dayStreak: num(data.dayStreak, 0),
+    itemStats: isRecord(data.itemStats) ? (data.itemStats as Record<string, ItemStats>) : {},
+    items: (data.items as unknown[]).filter(
+      (i): i is ScriptItem => isRecord(i) && typeof i.id === "string" && typeof i.upgradedScript === "string"
+    ),
   };
 }
 
-export function getMasterScriptSnapshot(): MasterScriptRepository {
-  if (!cachedRepository) {
-    cachedRepository = loadMasterScript();
-  }
-  return cachedRepository;
-}
+const vaultStore = createStore<MasterScriptRepository>({
+  key: STORAGE_KEYS.scriptVault,
+  version: 1,
+  fallback: () => createDefaultMasterRepository(),
+  migrate: (data) => migrateScriptVault(data),
+});
 
-export function getMasterScriptServerSnapshot(): MasterScriptRepository {
-  return createDefaultMasterRepository();
-}
+export const subscribeMasterScript = vaultStore.subscribe;
+export const getMasterScriptSnapshot = vaultStore.get;
+export const getMasterScriptServerSnapshot = vaultStore.getServerSnapshot;
 
-/**
- * Persists the master script repository and notifies reactive subscribers.
- */
+/** Persists the vault and notifies subscribers. */
 export function saveMasterScript(repository: MasterScriptRepository): void {
-  cachedRepository = {
-    ...repository,
-    lastPracticedAt: Date.now(),
-  };
-
-  if (typeof window !== "undefined") {
-    try {
-      window.localStorage.setItem(MASTER_SCRIPT_STORAGE_KEY, JSON.stringify(cachedRepository));
-    } catch (err) {
-      console.error("[master-script] Failed to save to localStorage:", err);
-    }
-  }
-
-  listeners.forEach((listener) => listener());
-}
-
-function localDay(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
+  vaultStore.set(repository);
 }
 
 /**
- * Logs a completed repetition rep: bumps totals, the per-item stats, and the day streak.
- * @param itemId   the script item practised
+ * Logs a completed repetition: bumps totals, the per-item stats, and the day streak.
+ * @param itemId      the script item practised
  * @param accentScore optional 0-100 accent score from the coach
  */
 export function logRepetitionCompleted(itemId?: string, accentScore?: number): void {
-  const current = getMasterScriptSnapshot();
   const now = new Date();
-  const today = localDay(now);
-  const yesterday = localDay(new Date(now.getTime() - 24 * 60 * 60 * 1000));
-
-  let dayStreak = current.dayStreak ?? 0;
-  if (current.lastPracticeDay !== today) {
-    dayStreak = current.lastPracticeDay === yesterday ? dayStreak + 1 : 1;
-  }
-
-  const itemStats = { ...(current.itemStats ?? {}) };
-  if (itemId) {
-    const prev = itemStats[itemId] ?? { reps: 0, bestAccentScore: 0, lastPracticedAt: 0 };
-    itemStats[itemId] = {
-      reps: prev.reps + 1,
-      bestAccentScore: Math.max(prev.bestAccentScore, accentScore ?? 0),
+  vaultStore.update((current) => {
+    const itemStats = { ...(current.itemStats ?? {}) };
+    if (itemId) itemStats[itemId] = applyRep(itemStats[itemId], accentScore, now.getTime());
+    return {
+      ...current,
+      totalPracticeCount: current.totalPracticeCount + 1,
+      streakReps: current.streakReps + 1,
+      dayStreak: nextDayStreak(current.lastPracticeDay, current.dayStreak ?? 0, now),
+      lastPracticeDay: localDay(now),
+      itemStats,
       lastPracticedAt: now.getTime(),
     };
-  }
-
-  saveMasterScript({
-    ...current,
-    totalPracticeCount: current.totalPracticeCount + 1,
-    streakReps: current.streakReps + 1,
-    dayStreak,
-    lastPracticeDay: today,
-    itemStats,
-    lastPracticedAt: now.getTime(),
   });
 }
 
-/**
- * Resets the master script repository to defaults.
- */
+/** Resets the vault to starter scripts built from `profile`. */
 export function resetMasterScript(profile?: CandidateProfile): MasterScriptRepository {
   const fresh = createDefaultMasterRepository(profile);
-  saveMasterScript(fresh);
+  vaultStore.set(fresh);
   return fresh;
 }

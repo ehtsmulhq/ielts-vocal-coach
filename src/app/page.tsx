@@ -29,10 +29,12 @@ import {
   getTestHistorySnapshot,
   getTestHistoryServerSnapshot,
   saveTestSession,
-  wipeAllUserData,
   type DailyImprovementDelta,
 } from "@/lib/test-history";
-import { LIVE_MODEL } from "@/lib/models";
+import { wipeAllUserData, cleanupLegacyKeys } from "@/storage/wipe";
+import { postJson } from "@/lib/api-client";
+import { studentWordCount as countStudentWords, studentTurnCount, substantiveTurnCount, cadenceWpm } from "@/domain/transcript";
+import { DEFAULT_LIVE_MODEL } from "@/lib/models";
 import { examinerInstruction, STAGE_CUES } from "@/lib/prompts";
 import { findSpokenQuestionIndex, detectSpokenStageTransition } from "@/lib/voice-tracking";
 import { LiveSession, type LiveStatus, type MicMode } from "@/lib/live-session";
@@ -58,7 +60,7 @@ import {
 export default function Home() {
   const [view, setView] = useState<"setup" | "session" | "mirrorgym" | "upgrading" | "feedback">("mirrorgym");
   const [band, setBand] = useState<TargetBand>("7.5");
-  const [activeModel, setActiveModel] = useState<string>(LIVE_MODEL);
+  const [activeModel, setActiveModel] = useState<string>(DEFAULT_LIVE_MODEL);
   const profile = useSyncExternalStore(
     subscribeProfile,
     getProfileSnapshot,
@@ -128,15 +130,9 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [speechProtection, setSpeechProtection] = useState<"protected" | "barge-in">("protected");
 
-  // One-time auto reset on client if previous legacy methodology is detected
+  // Remove keys from older app versions. Current data is migrated on read, never wiped.
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const version = window.localStorage.getItem("vocal_lab_app_version");
-      if (version !== "v3_authentic_hotseat") {
-        wipeAllUserData();
-        window.localStorage.setItem("vocal_lab_app_version", "v3_authentic_hotseat");
-      }
-    }
+    cleanupLegacyKeys();
   }, []);
 
   // Initialize SpeechEngine on client with teardown guard
@@ -193,30 +189,20 @@ export default function Home() {
     try {
       // Step 1: Generate authentic Cambridge Hot Seat test grounded in Knowledge Graph
       setLoadingStep("Loading Cambridge IELTS Official Hot Seat Test...");
-      const lessonRes = await fetch("/api/lesson", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ band: chosenBand, topic, focusArea, profile, cambridgeTestId, sceneId }),
-      });
-      if (!lessonRes.ok) {
-        const err = await lessonRes.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to generate Cambridge test");
-      }
-      const { lesson: generatedLesson } = (await lessonRes.json()) as { lesson: Lesson };
+      const { lesson: generatedLesson } = await postJson<{ lesson: Lesson }>(
+        "/api/lesson",
+        { band: chosenBand, topic, focusArea, profile, cambridgeTestId, sceneId },
+        { fallbackError: "Could not prepare the interview questions." }
+      );
       setLesson(generatedLesson);
 
       // Step 2: Request single-use ephemeral token
       setLoadingStep("Authorizing Cambridge Examiner audio session...");
-      const tokenRes = await fetch("/api/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: selectedLive, voice: voiceId }),
-      });
-      if (!tokenRes.ok) {
-        const err = await tokenRes.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to get ephemeral token");
-      }
-      const { token, model, voice } = await tokenRes.json();
+      const { token, model, voice } = await postJson<{ token: string; model: string; voice: string }>(
+        "/api/token",
+        { model: selectedLive, voice: voiceId },
+        { fallbackError: "Could not start the live examiner." }
+      );
 
       // Step 3: Instantiate LiveSession
       setLoadingStep("Connecting live British RP Examiner...");
@@ -259,10 +245,7 @@ export default function Home() {
 
           // Running word count for candidate in active stage
           if (role === "student") {
-            const activeStageStudentWords = transcriptRef.current
-              .filter((t) => t.role === "student" && t.stage === activeStage)
-              .reduce((acc, t) => acc + t.text.trim().split(/\s+/).filter(Boolean).length, 0);
-            setStudentWordCount(activeStageStudentWords);
+            setStudentWordCount(countStudentWords(transcriptRef.current, activeStage));
           }
 
           // REAL-TIME VOICE TRACKING: Move alongside Dr. Jonathan Vance's speech
@@ -325,10 +308,7 @@ export default function Home() {
           const activeStage = currentStageRef.current;
           const currentEntries = transcriptRef.current;
 
-          const studentTurns = currentEntries.filter(
-            (t) => t.role === "student" && t.stage === activeStage && t.text.trim().split(/\s+/).length >= 4
-          );
-          const studentTurnCount = studentTurns.length;
+          const studentTurnCount = substantiveTurnCount(currentEntries, activeStage);
 
           if (activeStage === "part1") {
             const totalPart1 = generatedLesson.hotSeatTest?.part1Questions?.length || 3;
@@ -343,9 +323,7 @@ export default function Home() {
               }, 2500);
             }
           } else if (activeStage === "part2") {
-            const studentPart2Words = currentEntries
-              .filter((t) => t.role === "student" && t.stage === "part2")
-              .reduce((acc, t) => acc + t.text.trim().split(/\s+/).filter(Boolean).length, 0);
+            const studentPart2Words = countStudentWords(currentEntries, "part2");
 
             if (studentPart2Words >= 50 && !autoAdvanceTimerRef.current) {
               setAutoAdvanceNotice("PART 2 MONOLOGUE COMPLETE • ADVANCING TO PART 3 DISCUSSION IN 3s...");
@@ -491,13 +469,7 @@ export default function Home() {
     setErrorMsg(null);
 
     // Verify if candidate spoke any words
-    const studentEntries = transcript.filter(
-      (t) => t.role === "student" && t.text.trim().length > 0
-    );
-    const totalStudentWords = studentEntries.reduce(
-      (acc, t) => acc + t.text.trim().split(/\s+/).filter(Boolean).length,
-      0
-    );
+    const totalStudentWords = countStudentWords(transcript);
 
     if (totalStudentWords === 0) {
       setView("feedback");
@@ -518,30 +490,16 @@ export default function Home() {
 
       // Run feedback diagnostic scoring and Band 8.5 Master Script transformation in parallel
       const [feedbackResult, upgradeResult] = await Promise.allSettled([
-        fetch("/api/feedback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lesson,
-            transcript,
-            band,
-          }),
-        }).then(async (res) => {
-          if (!res.ok) throw new Error("Failed to grade transcript");
-          return res.json();
-        }),
-        fetch("/api/upgrade-script", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            transcript,
-            profile,
-            targetBand: band,
-          }),
-        }).then(async (res) => {
-          if (!res.ok) throw new Error("Failed to upgrade master script");
-          return res.json();
-        }),
+        postJson<{ feedback?: Feedback; noSpeech?: boolean }>(
+          "/api/feedback",
+          { lesson, transcript, band },
+          { fallbackError: "Could not grade this interview." }
+        ),
+        postJson<{ items: MasterScriptRepository["items"] }>(
+          "/api/upgrade-script",
+          { transcript, profile, targetBand: band },
+          { fallbackError: "Could not turn your answers into scripts." }
+        ),
       ]);
 
       if (feedbackResult.status === "fulfilled" && feedbackResult.value) {
@@ -549,15 +507,12 @@ export default function Home() {
           setFeedback(null);
           setImprovementDelta(null);
           setNoSpeechDetected(true);
-        } else {
+        } else if (feedbackResult.value.feedback) {
           const feedbackData: Feedback = feedbackResult.value.feedback;
           setFeedback(feedbackData);
 
           // Calculate cadence and save session to history
-          const calculatedWpm =
-            sessionSeconds > 5 && totalStudentWords > 0
-              ? Math.round(totalStudentWords / (sessionSeconds / 60))
-              : 125;
+          const calculatedWpm = cadenceWpm(totalStudentWords, sessionSeconds, 125);
 
           const savedRecord = saveTestSession({
             timestamp: Date.now(),
@@ -573,13 +528,17 @@ export default function Home() {
               wpm: calculatedWpm,
               totalStudentWords,
               durationSeconds: sessionSeconds,
-              turnCount: studentEntries.length,
+              turnCount: studentTurnCount(transcript),
             },
             cambridgeTopic: lesson.topic,
           });
 
           setImprovementDelta(savedRecord.improvementDelta || null);
         }
+      }
+
+      if (feedbackResult.status === "rejected") {
+        setErrorMsg((feedbackResult.reason as Error)?.message ?? "Could not grade this interview.");
       }
 
       if (upgradeResult.status === "fulfilled" && upgradeResult.value?.items?.length) {
@@ -634,7 +593,7 @@ export default function Home() {
   };
 
   const handleWipeAllData = () => {
-    wipeAllUserData();
+    void wipeAllUserData();
     setFeedback(null);
     setImprovementDelta(null);
     handleRestart();

@@ -1,127 +1,42 @@
-import { generateJson, generateJsonWithMedia } from "@/lib/gemini";
+import { generateJson } from "@/server/gemini";
+import { guardJson, LIMITS } from "@/server/guard";
+import { handleRouteError } from "@/server/errors";
+import {
+  MirrorCoachRequestSchema,
+  MirrorCoachResponseSchema,
+  toGeminiSchema,
+  type MirrorCoachResponse,
+} from "@/domain/contracts";
+import { countWords, cadenceWpm } from "@/domain/transcript";
 
-interface MirrorCoachRequest {
-  targetScript: string;
-  candidateSpokenText?: string;
-  audioBase64?: string;
-  audioMimeType?: string;
-  modelAudioBase64?: string;
-  modelAudioMimeType?: string;
-  targetCollocations: { phrase: string; meaning: string }[];
-  thoughtChunks: string[];
-  durationSeconds: number;
-  category: string;
-  targetBand: string;
-}
+export const maxDuration = 60;
 
-interface MirrorMistake {
-  type: "syntax" | "collocation" | "hesitation" | "pronunciation" | "substitution";
-  userSaid: string;
-  targetPhrase: string;
-  coachCorrection: string;
-  phoneticTip?: string;
-}
-
-interface MirrorCoachResponse {
-  transcribedSpokenText?: string;
-  accuracyScore: number;
-  actualWpm: number;
-  fluencyRating: "Needs Polish" | "Solid Cadence" | "Master Level Band 9";
-  mistakes: MirrorMistake[];
-  praise: string;
-  drVanceSpokenFeedback: string;
-  matchedWordsCount: number;
-  totalWordsCount: number;
-  accent?: {
-    overall: number;
-    stress: number;
-    rhythm: number;
-    intonation: number;
-    sounds: number;
-    focusTip: string;
-  };
-}
-
-const mirrorCoachSchema = {
-  type: "object",
-  properties: {
-    transcribedSpokenText: { type: "string" },
-    accuracyScore: { type: "number" },
-    actualWpm: { type: "number" },
-    fluencyRating: {
-      type: "string",
-      enum: ["Needs Polish", "Solid Cadence", "Master Level Band 9"],
-    },
-    mistakes: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          type: {
-            type: "string",
-            enum: ["syntax", "collocation", "hesitation", "pronunciation", "substitution"],
-          },
-          userSaid: { type: "string" },
-          targetPhrase: { type: "string" },
-          coachCorrection: { type: "string" },
-          phoneticTip: { type: "string" },
-        },
-        required: ["type", "userSaid", "targetPhrase", "coachCorrection"],
-      },
-    },
-    praise: { type: "string" },
-    drVanceSpokenFeedback: { type: "string" },
-    matchedWordsCount: { type: "number" },
-    totalWordsCount: { type: "number" },
-    accent: {
-      type: "object",
-      properties: {
-        overall: { type: "number" },
-        stress: { type: "number" },
-        rhythm: { type: "number" },
-        intonation: { type: "number" },
-        sounds: { type: "number" },
-        focusTip: { type: "string" },
-      },
-      required: ["overall", "stress", "rhythm", "intonation", "sounds", "focusTip"],
-    },
-  },
-  required: [
-    "accuracyScore",
-    "actualWpm",
-    "fluencyRating",
-    "mistakes",
-    "praise",
-    "drVanceSpokenFeedback",
-    "matchedWordsCount",
-    "totalWordsCount",
-  ],
-};
+const responseSchema = toGeminiSchema(MirrorCoachResponseSchema);
 
 export async function POST(request: Request) {
+  const guarded = await guardJson(request, { route: "mirror-coach", ...LIMITS.coach }, MirrorCoachRequestSchema);
+  if (!guarded.ok) return guarded.response;
   try {
-    const body = (await request.json().catch(() => ({}))) as Partial<MirrorCoachRequest>;
     const {
-      targetScript = "",
-      candidateSpokenText = "",
+      targetScript,
+      candidateSpokenText,
       audioBase64,
-      audioMimeType = "audio/webm",
+      audioMimeType,
       modelAudioBase64,
-      modelAudioMimeType = "audio/wav",
-      targetCollocations = [],
-      thoughtChunks = [],
-      durationSeconds = 10,
-      category = "General",
-      targetBand = "7.5",
-    } = body;
+      modelAudioMimeType,
+      targetCollocations,
+      thoughtChunks,
+      durationSeconds,
+      category,
+      targetBand,
+    } = guarded.data;
 
-    const spokenWords = candidateSpokenText.trim().split(/\s+/).filter(Boolean);
-    const targetWords = targetScript.trim().split(/\s+/).filter(Boolean);
-    const durationMin = Math.max(0.1, durationSeconds / 60);
-    const calculatedWpm = Math.round(spokenWords.length / durationMin);
+    const spokenWordCount = countWords(candidateSpokenText);
+    const targetWordCount = countWords(targetScript);
+    const calculatedWpm = cadenceWpm(spokenWordCount, durationSeconds, 0, 0);
 
-    // If candidate said almost nothing and no audio is present
-    if (!audioBase64 && spokenWords.length < 3) {
+    // Nothing to assess: no audio and almost no recognised words.
+    if (!audioBase64 && spokenWordCount < 3) {
       const emptyResponse: MirrorCoachResponse = {
         transcribedSpokenText: candidateSpokenText,
         accuracyScore: 0,
@@ -132,13 +47,13 @@ export async function POST(request: Request) {
             type: "hesitation",
             userSaid: "(Silence or unintelligible audio)",
             targetPhrase: targetScript.slice(0, 50) + "...",
-            coachCorrection: "I didn't catch your voice clearly. Ensure your microphone is active and articulate the words with conviction.",
+            coachCorrection: "I didn't catch your voice clearly. Check your microphone and speak the words with conviction.",
           },
         ],
         praise: "Take a deep breath and start again when you are ready.",
-        drVanceSpokenFeedback: "I couldn't hear you clearly. Let us try that again together. Take a breath and speak up.",
+        drVanceSpokenFeedback: "I couldn't hear you clearly. Let's try that again. Take a breath and speak up.",
         matchedWordsCount: 0,
-        totalWordsCount: targetWords.length,
+        totalWordsCount: targetWordCount,
       };
       return Response.json(emptyResponse);
     }
@@ -168,7 +83,7 @@ ${thoughtChunks.map((chunk, i) => `[${i + 1}] "${chunk}"`).join("\n")}
 
 ${
   candidateSpokenText
-    ? `CLIENT BROWSER ASR TRANSCRIPTION DRAFT (${spokenWords.length} words, ${calculatedWpm} WPM):\n"${candidateSpokenText}"\n`
+    ? `CLIENT BROWSER ASR TRANSCRIPTION DRAFT (${spokenWordCount} words, ${calculatedWpm} WPM):\n"${candidateSpokenText}"\n`
     : ""
 }
 DELIVERY DURATION: ${durationSeconds} seconds.
@@ -201,29 +116,27 @@ Use the \`pronunciation\` mistake type and \`phoneticTip\` (give the sound or st
    - A concise, authoritative, warm 2-3 sentence vocal coach spoken response that Dr. Vance will speak aloud to the candidate right now.
    - Example: "Well done on keeping the cadence at 135 words per minute. Notice that you omitted 'indispensable asset' and rushed through the second breath chunk. Listen to my rhythm and take it from the top."`;
 
-    if (audioBase64) {
-      const contents = [
-        ...(modelAudioBase64
-          ? [{ inlineData: { mimeType: modelAudioMimeType, data: modelAudioBase64 } }]
-          : []),
-        {
-          inlineData: {
-            mimeType: audioMimeType,
-            data: audioBase64,
+    const contents = audioBase64
+      ? [
+          {
+            role: "user",
+            parts: [
+              ...(modelAudioBase64 ? [{ inlineData: { mimeType: modelAudioMimeType, data: modelAudioBase64 } }] : []),
+              { inlineData: { mimeType: audioMimeType, data: audioBase64 } },
+              { text: prompt },
+            ],
           },
-        },
-        {
-          text: prompt,
-        },
-      ];
-      const { data } = await generateJsonWithMedia<MirrorCoachResponse>(contents, mirrorCoachSchema);
-      return Response.json(data);
-    } else {
-      const { data } = await generateJson<MirrorCoachResponse>(prompt, mirrorCoachSchema);
-      return Response.json(data);
-    }
+        ]
+      : prompt;
+
+    const { data } = await generateJson<MirrorCoachResponse>({
+      contents,
+      schema: responseSchema,
+      mode: "scoring",
+      validate: MirrorCoachResponseSchema,
+    });
+    return Response.json(data);
   } catch (err) {
-    console.error("[api/mirror-coach]", err);
-    return Response.json({ error: (err as Error).message }, { status: 500 });
+    return handleRouteError("mirror-coach", err);
   }
 }

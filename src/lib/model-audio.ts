@@ -3,15 +3,30 @@
  * Cache: in-memory Map + IndexedDB, keyed by a hash of voice + text.
  */
 
-const DB_NAME = "vocal_lab_model_audio_v1";
+import { AUDIO_CACHE_DB } from "@/storage/registry";
+import { readApiError } from "@/lib/api-client";
+
+const DB_NAME = AUDIO_CACHE_DB;
 const STORE = "clips";
 const memory = new Map<string, Blob>();
 const inflight = new Map<string, Promise<Blob>>();
 
-function hash(s: string): string {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(36) + "_" + s.length;
+/** SHA-256 cache key (falls back to djb2 where SubtleCrypto is unavailable, e.g. plain http). */
+async function hash(s: string): Promise<string> {
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return "djb2_" + (h >>> 0).toString(36) + "_" + s.length;
+  }
+}
+
+/** Drops in-memory clips (the IndexedDB database is deleted separately by the wipe). */
+export function clearModelAudioMemoryCache(): void {
+  memory.clear();
+  inflight.clear();
 }
 
 function openDb(): Promise<IDBDatabase | null> {
@@ -49,8 +64,8 @@ async function dbPut(key: string, blob: Blob): Promise<void> {
 }
 
 /** Returns a WAV blob of the RP model reading `text`. Throws if TTS is unavailable. */
-export function getModelAudio(text: string, voice?: string): Promise<Blob> {
-  const key = hash(`${voice ?? "default"}::${text}`);
+export async function getModelAudio(text: string, voice?: string): Promise<Blob> {
+  const key = await hash(`${voice ?? "default"}::${text}`);
   const cached = memory.get(key);
   if (cached) return Promise.resolve(cached);
   const pending = inflight.get(key);
@@ -67,7 +82,7 @@ export function getModelAudio(text: string, voice?: string): Promise<Blob> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, voice }),
     });
-    if (!res.ok) throw new Error(`Model audio failed (${res.status})`);
+    if (!res.ok) throw await readApiError(res, "The model voice is unavailable right now.");
     const blob = await res.blob();
     memory.set(key, blob);
     void dbPut(key, blob);

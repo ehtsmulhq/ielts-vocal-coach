@@ -1,94 +1,31 @@
 import { CandidateProfile, DEFAULT_PROFILE } from "./types";
+import { createStore } from "@/storage/store";
+import { STORAGE_KEYS } from "@/storage/registry";
 
-const PROFILE_STORAGE_KEY = "vocal_lab_candidate_profile_v1";
-
-let cachedProfile: CandidateProfile | null = null;
-const listeners = new Set<() => void>();
-
-/**
- * Safely loads the candidate profile from localStorage.
- * Falls back to DEFAULT_PROFILE if running in SSR, if missing, or on parse error.
- */
-export function loadProfile(): CandidateProfile {
-  if (typeof window === "undefined") {
-    return DEFAULT_PROFILE;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (!raw) {
-      return DEFAULT_PROFILE;
-    }
-    const parsed = JSON.parse(raw) as Partial<CandidateProfile>;
-    return {
-      ...DEFAULT_PROFILE,
-      ...parsed,
-      lastUpdated: parsed.lastUpdated || Date.now(),
-    };
-  } catch (err) {
-    console.warn("[profile] Failed to read profile from localStorage, using default:", err);
-    return DEFAULT_PROFILE;
-  }
+/** Merges any stored profile (legacy raw = v0, or envelope v1) onto the defaults. */
+export function migrateProfile(data: unknown): CandidateProfile {
+  const partial = typeof data === "object" && data !== null && !Array.isArray(data) ? (data as Partial<CandidateProfile>) : {};
+  return { ...DEFAULT_PROFILE, ...partial };
 }
 
-/**
- * React useSyncExternalStore subscription for tear-free, hydration-safe reactive profile updates.
- */
-export function subscribeProfile(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
+const profileStore = createStore<CandidateProfile>({
+  key: STORAGE_KEYS.profile,
+  version: 1,
+  fallback: () => DEFAULT_PROFILE,
+  migrate: (data) => migrateProfile(data),
+});
 
-export function getProfileSnapshot(): CandidateProfile {
-  if (!cachedProfile) {
-    cachedProfile = loadProfile();
-  }
-  return cachedProfile;
-}
+export const subscribeProfile = profileStore.subscribe;
+export const getProfileSnapshot = profileStore.get;
+export const getProfileServerSnapshot = profileStore.getServerSnapshot;
 
-export function getProfileServerSnapshot(): CandidateProfile {
-  return DEFAULT_PROFILE;
-}
-
-/**
- * Persists the candidate profile to localStorage and notifies reactive subscribers.
- */
+/** Persists the profile and notifies subscribers. */
 export function saveProfile(profile: CandidateProfile): void {
-  cachedProfile = {
-    ...profile,
-    lastUpdated: Date.now(),
-  };
-
-  if (typeof window !== "undefined") {
-    try {
-      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(cachedProfile));
-    } catch (err) {
-      console.error("[profile] Failed to save profile to localStorage:", err);
-    }
-  }
-
-  listeners.forEach((listener) => listener());
+  profileStore.set({ ...profile, lastUpdated: Date.now() });
 }
 
-/**
- * Resets the candidate profile to the system default template and notifies subscribers.
- */
+/** Removes the stored profile and returns to the defaults. */
 export function resetProfile(): CandidateProfile {
-  cachedProfile = {
-    ...DEFAULT_PROFILE,
-    lastUpdated: Date.now(),
-  };
-
-  if (typeof window !== "undefined") {
-    try {
-      window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-    } catch (err) {
-      console.warn("[profile] Failed to clear profile:", err);
-    }
-  }
-
-  listeners.forEach((listener) => listener());
-  return cachedProfile;
+  profileStore.reset();
+  return profileStore.get();
 }

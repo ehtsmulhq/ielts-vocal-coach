@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import type { MasterScriptRepository, ScriptItem } from "@/lib/master-script";
 import { logRepetitionCompleted } from "@/lib/master-script";
 import { getModelAudio, blobToBase64 } from "@/lib/model-audio";
+import { postJson } from "@/lib/api-client";
+import { MirrorCoachResponseSchema, type MirrorCoachResponse } from "@/domain/contracts";
+import { recordAttempt } from "@/storage/attempts";
 import { SHADOWING_LIBRARY, LIBRARY_PART_LABELS } from "@/lib/shadowing-library";
 import {
   Volume2,
@@ -44,34 +47,6 @@ function pickRecorderMime(): string {
 }
 
 const accentBarColor = (n: number) => (n >= 80 ? "bg-emerald-500" : n >= 60 ? "bg-amber-500" : "bg-rose-500");
-
-interface MirrorMistake {
-  type: "syntax" | "collocation" | "hesitation" | "pronunciation" | "substitution";
-  userSaid: string;
-  targetPhrase: string;
-  coachCorrection: string;
-  phoneticTip?: string;
-}
-
-interface MirrorCoachResponse {
-  transcribedSpokenText?: string;
-  accuracyScore: number;
-  actualWpm: number;
-  fluencyRating: "Needs Polish" | "Solid Cadence" | "Master Level Band 9";
-  mistakes: MirrorMistake[];
-  praise: string;
-  drVanceSpokenFeedback: string;
-  matchedWordsCount: number;
-  totalWordsCount: number;
-  accent?: {
-    overall: number;
-    stress: number;
-    rhythm: number;
-    intonation: number;
-    sounds: number;
-    focusTip: string;
-  };
-}
 
 interface MasterMirrorGymProps {
   repository: MasterScriptRepository;
@@ -522,10 +497,9 @@ export function MasterMirrorGym({
     }
 
     try {
-      const res = await fetch("/api/mirror-coach", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await postJson(
+        "/api/mirror-coach",
+        {
           targetScript: currentItem.upgradedScript,
           candidateSpokenText: spokenTranscript,
           audioBase64,
@@ -537,14 +511,9 @@ export function MasterMirrorGym({
           durationSeconds: readingSeconds || 10,
           category: currentItem.category,
           targetBand: repository.targetBand || "7.5",
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to analyze delivery with AI Coach.");
-      }
-
-      const data: MirrorCoachResponse = await res.json();
+        },
+        { schema: MirrorCoachResponseSchema, fallbackError: "The coach could not analyse that take. Please try again." }
+      );
       setCoachAnalysis(data);
 
       if (data.transcribedSpokenText && !spokenTranscript) {
@@ -554,6 +523,20 @@ export function MasterMirrorGym({
       // Auto-log the rep once a real, scored take was analysed.
       if (data.accuracyScore > 0) {
         logRepetitionCompleted(currentItem.id, data.accent?.overall ?? data.accuracyScore);
+        recordAttempt({
+          scriptId: currentItem.id,
+          accuracy: data.accuracyScore,
+          wpm: data.actualWpm,
+          accent: data.accent
+            ? {
+                overall: data.accent.overall,
+                stress: data.accent.stress,
+                rhythm: data.accent.rhythm,
+                intonation: data.accent.intonation,
+                sounds: data.accent.sounds,
+              }
+            : undefined,
+        });
         setRepJustLogged(true);
         setTimeout(() => setRepJustLogged(false), 2500);
       }
