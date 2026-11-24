@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getModelAudio } from "@/lib/model-audio";
 import { SpeechEngine } from "@/lib/speech-engine";
+import { getPreferencesSnapshot } from "@/storage/preferences";
 
 /**
  * Plays the British RP model clip (Gemini TTS, cached), local takes, and
@@ -74,7 +75,7 @@ export function useModelPlayer() {
     async (text: string, rate: number): Promise<{ ok: boolean; ms: number }> => {
       try {
         setIsLoading(true);
-        const blob = await getModelAudio(text);
+        const blob = await getModelAudio(text, getPreferencesSnapshot().modelVoice);
         setIsLoading(false);
         setUsingFallbackVoice(false);
         const started = performance.now();

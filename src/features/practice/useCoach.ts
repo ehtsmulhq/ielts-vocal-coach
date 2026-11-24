@@ -9,6 +9,7 @@ import { blobToBase64, getModelAudio } from "@/lib/model-audio";
 import { logRepetitionCompleted } from "@/lib/master-script";
 import { getPreviousAttempt, recordAttempt } from "@/storage/attempts";
 import type { Take } from "./useRecorder";
+import { getPreferencesSnapshot } from "@/storage/preferences";
 
 export interface CoachResult {
   analysis: MirrorCoachResponse;
@@ -33,7 +34,7 @@ export function useCoach() {
       let modelAudioBase64: string | undefined;
       if (audioBase64) {
         try {
-          modelAudioBase64 = await blobToBase64(await getModelAudio(script.upgradedScript));
+          modelAudioBase64 = await blobToBase64(await getModelAudio(script.upgradedScript, getPreferencesSnapshot().modelVoice));
         } catch {
           // Without the reference clip the coach still scores words and pacing.
         }

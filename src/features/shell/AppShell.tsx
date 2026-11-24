@@ -12,7 +12,9 @@ import { cleanupLegacyKeys } from "@/storage/wipe";
 const NAV = [
   { href: "/", label: "Today" },
   { href: "/library", label: "Library" },
+  { href: "/progress", label: "Progress" },
   { href: "/capture", label: "Capture" },
+  { href: "/settings", label: "Settings" },
 ] as const;
 
 function isActive(pathname: string, href: string) {

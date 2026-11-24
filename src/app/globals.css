@@ -30,6 +30,14 @@
   --danger: #be123c;
   --danger-soft: #fdecef;
 
+  /* Charts: validated with the dataviz palette checker (lightness, chroma, contrast) */
+  --series-1: #2a78d6;
+  --seq-0: #f4f4f5;
+  --seq-1: #b7d3f6;
+  --seq-2: #6da7ec;
+  --seq-3: #2a78d6;
+  --seq-4: #184f95;
+
   color-scheme: light;
 }
 
@@ -55,6 +63,13 @@
   --danger: #fb7185;
   --danger-soft: #33101a;
 
+  --series-1: #3987e5;
+  --seq-0: #232327;
+  --seq-1: #104281;
+  --seq-2: #1c5cab;
+  --seq-3: #3987e5;
+  --seq-4: #86b6ef;
+
   color-scheme: dark;
 }
 
@@ -77,6 +92,7 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-series-1: var(--series-1);
 
   /* Legacy aliases used by older screens */
   --color-background: var(--bg);

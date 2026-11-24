@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { History, Mic, Pencil, UserRound } from "lucide-react";
-import { Alert, Button, ButtonLink, Card, SectionLabel } from "@/ui/primitives";
+import { Alert, Button, Card, SectionLabel } from "@/ui/primitives";
 import { CAMBRIDGE_TEST_MODULES } from "@/lib/cambridge-materials";
 import { MOST_ASKED_PART2_SCENES } from "@/lib/ielts-question-knowledge-graph";
 import { DEFAULT_LIVE_MODEL, DEFAULT_VOICE, LIVE_MODELS, LIVE_VOICES } from "@/lib/models";
@@ -198,52 +197,13 @@ export function CaptureSetup({
         </div>
       </Card>
 
-      <DataCard />
-    </div>
-  );
-}
-
-/** Temporary home for data controls until the Settings page exists. */
-function DataCard() {
-  const router = useRouter();
-  const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState(false);
-  return (
-    <Card className="space-y-3 bg-surface-2/50">
-      <SectionLabel>Your data</SectionLabel>
       <p className="text-sm text-muted">
-        Everything is stored only in this browser: your profile, scripts, scores and cached model audio.
+        Your interviews and scripts stay in this browser. Back them up or erase them in{" "}
+        <Link href="/settings" className="text-accent underline-offset-4 hover:underline">
+          Settings
+        </Link>
+        .
       </p>
-      {confirming ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-danger">This permanently deletes all of it. Continue?</span>
-          <Button
-            variant="danger"
-            size="sm"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              const { wipeAllUserData } = await import("@/storage/wipe");
-              await wipeAllUserData();
-              router.push("/");
-            }}
-          >
-            Yes, erase everything
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-            Cancel
-          </Button>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          <Button size="sm" variant="ghost" className="text-danger" onClick={() => setConfirming(true)}>
-            Erase all my data
-          </Button>
-          <ButtonLink href="/library" size="sm" variant="ghost">
-            Go to library
-          </ButtonLink>
-        </div>
-      )}
-    </Card>
+    </div>
   );
 }

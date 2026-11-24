@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Card } from "@/ui/primitives";
-import { CandidateGrillModal } from "@/components/CandidateGrillModal";
+import { Dialog } from "@/ui/dialog";
+import { ProfileForm } from "@/features/profile/ProfileForm";
 import { useCaptureStore, useHydrated, useProfile } from "@/features/shared/stores";
-import { saveProfile } from "@/lib/profile";
-import { refreshStarterScripts } from "@/lib/master-script";
 import { clearCaptureDraft } from "@/storage/capture";
 import { useCaptureSession } from "./useCaptureSession";
 import { CaptureSetup } from "./components/CaptureSetup";
@@ -55,17 +54,14 @@ export function CaptureScreen() {
         />
       )}
 
-      {editingProfile && (
-        <CandidateGrillModal
-          initialProfile={profile}
-          onCompleteGrill={(completed) => {
-            saveProfile(completed);
-            refreshStarterScripts(completed);
-            setEditingProfile(false);
-          }}
-          onSkip={() => setEditingProfile(false)}
-        />
-      )}
+      <Dialog
+        open={editingProfile}
+        onClose={() => setEditingProfile(false)}
+        title="About you"
+        description="The examiner uses your name, and your answers become scripts about your own life."
+      >
+        <ProfileForm profile={profile} onSaved={() => setEditingProfile(false)} />
+      </Dialog>
     </>
   );
 }

@@ -7,9 +7,13 @@ export interface Preferences {
   theme: ThemePreference;
   /** Default playback speed for the model voice. */
   modelRate: number;
+  /** Prebuilt Gemini voice used for the British RP model. */
+  modelVoice: string;
+  /** Whether the first-run welcome has been completed or skipped. */
+  onboarded: boolean;
 }
 
-export const DEFAULT_PREFERENCES: Preferences = { theme: "system", modelRate: 0.85 };
+export const DEFAULT_PREFERENCES: Preferences = { theme: "system", modelRate: 0.85, modelVoice: "Puck", onboarded: false };
 
 const RATES = [0.75, 0.85, 1];
 
@@ -18,6 +22,8 @@ export function migratePreferences(data: unknown): Preferences {
   return {
     theme: d.theme === "light" || d.theme === "dark" || d.theme === "system" ? d.theme : DEFAULT_PREFERENCES.theme,
     modelRate: typeof d.modelRate === "number" && RATES.includes(d.modelRate) ? d.modelRate : DEFAULT_PREFERENCES.modelRate,
+    modelVoice: typeof d.modelVoice === "string" && /^[A-Za-z]{2,20}$/.test(d.modelVoice) ? d.modelVoice : DEFAULT_PREFERENCES.modelVoice,
+    onboarded: d.onboarded === true,
   };
 }
 

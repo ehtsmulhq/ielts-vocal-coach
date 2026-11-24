@@ -10,7 +10,7 @@ Shadowing is how people absorb an accent: you copy the rhythm, stress and sounds
 2. **Shadow**: the model speaks one breath-group at a time and you repeat it straight away. Each of your repeats is kept in memory so you can play it back against the model.
 3. **Deliver**: say the whole answer yourself. Gemini listens to the **model clip and your take together** and scores your accent (sounds, stress, rhythm, intonation), plus one thing to fix on the next rep.
 
-Reps, per-script best scores and a daily streak are tracked locally. Nothing leaves your browser except the audio sent for coaching, and no recordings are stored.
+Reps, per-script best scores, a daily streak and your weakest accent area are tracked locally on the Progress page. Nothing leaves your browser except the audio sent for coaching, and no recordings are stored. Settings lets you download a backup file and restore it on another device.
 
 ### Where the scripts come from
 
@@ -69,7 +69,7 @@ If Gemini TTS is unavailable the gym falls back to your browser's speech voice a
 
 ## Project layout
 
-- Routes: `/` (Today), `/library`, `/practice/[scriptId]` (Listen, Shadow, Deliver, Feedback), `/capture` (live interview) and `/capture/report` (choose which new scripts to keep, plus the band report)
+- Routes: `/` (Today, with a first-run welcome), `/library`, `/practice/[scriptId]` (Listen, Shadow, Deliver, Feedback), `/progress` (score trend, focus area, practice calendar), `/capture` (live interview), `/capture/report` (choose which new scripts to keep, plus the band report) and `/settings` (model voice and speed, profile, theme, backup, restore and erase)
 - `src/features/capture/`: `useCaptureSession` (reducer-driven live interview), grading pipeline, setup/live/report screens
 - `src/features/practice/`: practice hooks (`useModelPlayer`, `useRecorder`, `useShadowLoop`, `useCoach`) and panels
 - `src/features/{today,library,shell}/`: Today and Library screens, app shell with nav and theme toggle

@@ -6,7 +6,9 @@ import { ArrowRight, Flame, Headphones, Mic, Repeat, Sparkles } from "lucide-rea
 import { activeStreak } from "@/domain/stats";
 import { headlineScore } from "@/domain/attempt";
 import { Badge, ButtonLink, Card, SectionLabel, scoreTone } from "@/ui/primitives";
-import { useAttempts, useHydrated, useProfile, useScriptVault, useHasCaptured } from "@/features/shared/stores";
+import { useAttempts, useHydrated, usePreferences, useProfile, useScriptVault, useHasCaptured } from "@/features/shared/stores";
+import { DEFAULT_PROFILE } from "@/lib/types";
+import { WelcomeCard } from "./WelcomeCard";
 import { buildPacks, findScript, scriptLabel, suggestScript } from "@/features/library/catalog";
 
 const STEPS = [
@@ -35,7 +37,11 @@ export function TodayScreen() {
   const recent = [...attempts].reverse().slice(0, 5);
   const streak = hydrated ? activeStreak(vault.lastPracticeDay, vault.dayStreak ?? 0, new Date()) : 0;
   const isNew = hydrated && vault.totalPracticeCount === 0;
-  const name = profile.hasCompletedGrill ? profile.preferredName : "";
+  const prefs = usePreferences();
+  // The built-in example name is never shown as the learner's.
+  const name = profile.hasCompletedGrill || profile.preferredName !== DEFAULT_PROFILE.preferredName ? profile.preferredName : "";
+
+  if (isNew && !prefs.onboarded) return <WelcomeCard profile={profile} firstScript={suggestion} />;
 
   return (
     <div className="space-y-8">
