@@ -331,7 +331,7 @@ export const CAMBRIDGE_TEST_MODULES: CambridgeTestModule[] = [
 ];
 
 /**
- * Official Cambridge Functional Spoken Language Bank (Band 7.5 - 9.0 Descriptors)
+ * Functional spoken language for higher bands (written for this app, Cambridge-style)
  */
 export const CAMBRIDGE_FUNCTIONAL_FRAMES = [
   {

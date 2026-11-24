@@ -7,7 +7,6 @@ import { activeStreak } from "@/domain/stats";
 import { headlineScore } from "@/domain/attempt";
 import { Badge, ButtonLink, Card, SectionLabel, scoreTone } from "@/ui/primitives";
 import { useAttempts, useHydrated, usePreferences, useProfile, useScriptVault, useHasCaptured } from "@/features/shared/stores";
-import { DEFAULT_PROFILE } from "@/lib/types";
 import { WelcomeCard } from "./WelcomeCard";
 import { buildPacks, findScript, scriptLabel, suggestScript } from "@/features/library/catalog";
 
@@ -38,8 +37,7 @@ export function TodayScreen() {
   const streak = hydrated ? activeStreak(vault.lastPracticeDay, vault.dayStreak ?? 0, new Date()) : 0;
   const isNew = hydrated && vault.totalPracticeCount === 0;
   const prefs = usePreferences();
-  // The built-in example name is never shown as the learner's.
-  const name = profile.hasCompletedGrill || profile.preferredName !== DEFAULT_PROFILE.preferredName ? profile.preferredName : "";
+  const name = profile.preferredName;
 
   if (isNew && !prefs.onboarded) return <WelcomeCard profile={profile} firstScript={suggestion} />;
 

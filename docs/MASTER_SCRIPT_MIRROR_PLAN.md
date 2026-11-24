@@ -1,3 +1,5 @@
+> **Historical design notes (October 2026).** This is the original thinking behind script capture and shadowing. The current product and code are described in [PRODUCT.md](PRODUCT.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
+
 # The Master Script Vault & Acoustic Apprenticeship Blueprint
 ## High-Repetition Vocal Muscle Memory, Authentic Hot-Seat Capture & Native Exemplar Mirroring
 

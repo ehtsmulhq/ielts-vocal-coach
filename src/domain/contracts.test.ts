@@ -7,7 +7,6 @@ import {
   toGeminiSchema,
 } from "./contracts";
 import { SHADOWING_LIBRARY } from "@/lib/shadowing-library";
-import { createDefaultMasterRepository } from "@/lib/master-script";
 
 describe("contracts", () => {
   it("applies request defaults and rejects non-audio MIME types", () => {
@@ -24,7 +23,7 @@ describe("contracts", () => {
   });
 
   it("every built-in script satisfies the shared ScriptItem contract", () => {
-    for (const item of [...SHADOWING_LIBRARY, ...createDefaultMasterRepository().items]) {
+    for (const item of SHADOWING_LIBRARY) {
       const res = ScriptItemSchema.safeParse(item);
       expect(res.success, `${item.id}: ${res.error?.issues[0]?.message}`).toBe(true);
     }

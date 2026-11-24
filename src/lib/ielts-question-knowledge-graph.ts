@@ -538,21 +538,6 @@ export const REAL_EXAMINER_QUESTION_PATTERNS: QuestionPatternFormula[] = [
   },
 ];
 
-/**
- * Finds a matching Part 1 cluster by ID or keyword.
- */
-export function getPart1Cluster(idOrKeyword?: string): Part1Cluster {
-  if (!idOrKeyword) return REAL_PART1_CLUSTERS[0]; // default to Work & Study
-  const lower = idOrKeyword.toLowerCase();
-  const found = REAL_PART1_CLUSTERS.find(
-    (c) => c.id === lower || c.category.toLowerCase().includes(lower)
-  );
-  return found || REAL_PART1_CLUSTERS[0];
-}
-
-/**
- * Finds a matching Part 2 scene by ID, category, or title keyword.
- */
 export function getPart2Scene(idOrKeyword?: string): Part2MostAskedScene {
   if (!idOrKeyword) return MOST_ASKED_PART2_SCENES[0];
   const lower = idOrKeyword.toLowerCase();

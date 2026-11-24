@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, MicOff } from "lucide-react";
 import { Alert, Badge, Button, ButtonLink, Card, SectionLabel, cn } from "@/ui/primitives";
-import { FeedbackReport } from "@/components/FeedbackReport";
+import { BandReport } from "./components/BandReport";
 import { useCaptureStore, useHydrated } from "@/features/shared/stores";
 import { addPersonalScripts } from "@/lib/master-script";
 import { recordScriptDecision, type CaptureReport } from "@/storage/capture";
@@ -107,7 +106,6 @@ function ScriptReview({ report }: { report: CaptureReport }) {
 export function CaptureReportScreen() {
   const hydrated = useHydrated();
   const { report } = useCaptureStore();
-  const router = useRouter();
 
   if (!hydrated) return <Card className="h-64 animate-pulse bg-surface-2" aria-busy="true" aria-label="Loading" />;
   if (!report) {
@@ -166,13 +164,7 @@ export function CaptureReportScreen() {
               <h2 id="band-heading" className="text-xl font-semibold">
                 Band report
               </h2>
-              <FeedbackReport
-                feedback={report.feedback}
-                improvementDelta={report.improvementDelta ?? undefined}
-                dayNumber={report.sessionNumber}
-                onRestart={() => router.push("/capture")}
-                onEnterMirrorGym={() => router.push("/library")}
-              />
+              <BandReport feedback={report.feedback} delta={report.improvementDelta} sessionNumber={report.sessionNumber} />
             </section>
           )}
         </>

@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: { default: "Accent Shadowing Gym", template: "%s · Accent Shadowing Gym" },
   description:
     "Shadow a British RP model voice phrase by phrase, get accent feedback on every take, and build the accent into muscle memory.",
+  applicationName: "Accent Shadowing Gym",
+  appleWebApp: { capable: true, title: "Shadowing Gym", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

@@ -119,16 +119,26 @@ export const ModelAudioRequestSchema = z.object({
 export type ModelAudioRequest = z.infer<typeof ModelAudioRequestSchema>;
 
 // ---------------------------------------------------------------- live token
+/** Names are interpolated into the examiner prompt, so only plain name characters are allowed. */
+const PersonName = z
+  .string()
+  .trim()
+  .max(60)
+  .regex(/^[\p{L}\p{M} .'-]*$/u, "may only contain letters, spaces, apostrophes, hyphens and full stops");
+
 export const TokenRequestSchema = z.object({
   model: z.string().max(80).optional(),
   voice: z.string().max(40).optional(),
+  band: TargetBandSchema.catch("7.5"),
+  cambridgeTestId: z.string().max(80).optional(),
+  sceneId: z.string().max(80).optional(),
+  candidate: z.object({ preferredName: PersonName.default(""), fullName: PersonName.default("") }).default({ preferredName: "", fullName: "" }),
 });
 
 // ---------------------------------------------------------------- lesson
 export const LessonRequestSchema = z.object({
   band: TargetBandSchema.catch("7.5"),
   topic: z.string().max(500).optional(),
-  focusArea: z.string().max(40).optional(),
   profile: z.record(z.string(), z.unknown()).optional(),
   cambridgeTestId: z.string().max(80).optional(),
   sceneId: z.string().max(80).optional(),

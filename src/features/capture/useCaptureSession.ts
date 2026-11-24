@@ -4,7 +4,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LiveSession, type MicMode } from "@/lib/live-session";
 import { SpeechEngine } from "@/lib/speech-engine";
-import { examinerInstruction, STAGE_CUES } from "@/lib/prompts";
+import { STAGE_CUES } from "@/lib/prompts";
 import { postJson } from "@/lib/api-client";
 import { decideAutoAdvance } from "@/domain/capture";
 import type { CandidateProfile, Lesson, TargetBand } from "@/lib/types";
@@ -52,17 +52,25 @@ export function useCaptureSession(profile: CandidateProfile) {
   // ---------------------------------------------------------------- start
   const start = useCallback(
     async (config: CaptureConfig) => {
-      dispatch({ type: "PREPARE", step: "Preparing your interview questions…" });
       try {
-        const { lesson } = await postJson<{ lesson: Lesson }>(
-          "/api/lesson",
-          { band: config.band, cambridgeTestId: config.cambridgeTestId, sceneId: config.sceneId },
-          { fallbackError: "Could not prepare the interview questions." }
-        );
         dispatch({ type: "PREPARE", step: "Connecting to the examiner…" });
-        const { token, model, voice } = await postJson<{ token: string; model: string; voice: string }>(
+        // The server builds the questions and the examiner prompt, and locks the token to them.
+        const { token, model, voice, systemInstruction, lesson } = await postJson<{
+          token: string;
+          model: string;
+          voice: string;
+          systemInstruction: string;
+          lesson: Lesson;
+        }>(
           "/api/token",
-          { model: config.model, voice: config.voice },
+          {
+            model: config.model,
+            voice: config.voice,
+            band: config.band,
+            cambridgeTestId: config.cambridgeTestId,
+            sceneId: config.sceneId,
+            candidate: { preferredName: profile.preferredName, fullName: profile.fullName },
+          },
           { fallbackError: "Could not start the live examiner." }
         );
 
@@ -77,7 +85,7 @@ export function useCaptureSession(profile: CandidateProfile) {
         sessionRef.current = live;
         live.setMicMode(state.micMode);
         live.setSpeechProtection(state.protection);
-        await live.start({ token, model, voice, systemInstruction: examinerInstruction(lesson, profile) });
+        await live.start({ token, model, voice, systemInstruction });
 
         cuedStageRef.current = "part1";
         seenTurnRef.current = 0;

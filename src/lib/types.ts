@@ -51,24 +51,24 @@ export interface CandidateProfile {
   lastUpdated?: number;
 }
 
+/** An empty profile: nothing about the learner is assumed until they tell us. */
 export const DEFAULT_PROFILE: CandidateProfile = {
-  fullName: "Alex Mercer",
-  preferredName: "Alex",
+  fullName: "",
+  preferredName: "",
   status: "working",
-  occupationOrMajor: "Software Engineer",
-  fieldDetails: "building distributed web and cloud infrastructure",
-  hometownName: "Chittagong",
-  hometownVibe: "coastal seaport with green hills and maritime trade",
-  currentResidence: "Dhanmondi, Dhaka",
+  occupationOrMajor: "",
+  fieldDetails: "",
+  hometownName: "",
+  hometownVibe: "",
+  currentResidence: "",
   livingSetup: "apartment",
-  favoriteRoom: "sunlit study nook with my dual monitors and espresso maker",
-  morningRoutine: "early morning strength training and brewing filter coffee before checking screens",
-  unwindingHabit: "cooking from scratch with fresh produce and reading speculative fiction",
+  favoriteRoom: "",
+  morningRoutine: "",
+  unwindingHabit: "",
   targetBand: "7.5",
-  examPurpose: "postgraduate study admission and professional international relocation",
+  examPurpose: "",
   hasCompletedGrill: false,
-  lastUpdated: Date.now(),
-};
+}
 
 export interface CueCard {
   title: string;
@@ -97,14 +97,11 @@ export interface Lesson {
   topic: string;
   band: TargetBand;
   hotSeatTest: CambridgeHotSeatTest;
-  // Deprecated alias for backwards-compatibility
-  ieltsExam?: CambridgeHotSeatTest;
 }
 
 export interface LessonRequest {
   band: TargetBand;
   topic?: string;
-  focusArea?: "full" | "career" | "hometown" | "habits" | "consonants" | "reading" | "speed";
   profile?: CandidateProfile;
   cambridgeTestId?: string;
   sceneId?: string;
@@ -128,7 +125,8 @@ export interface Feedback {
   lexical: CriterionScore;
   grammar: CriterionScore;
   pronunciation: CriterionScore;
-  vocalHabits: {
+  /** Legacy: older reports contain these; they are no longer generated or shown. */
+  vocalHabits?: {
     readingStamina: string;
     speakingWpm: string;
     jawTension: string;

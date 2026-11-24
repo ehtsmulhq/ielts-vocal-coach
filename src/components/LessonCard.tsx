@@ -37,7 +37,7 @@ export function LessonCard({
   isTutorSpeaking,
   studentWordCount = 0,
 }: LessonCardProps) {
-  const exam = lesson.hotSeatTest || lesson.ieltsExam;
+  const exam = lesson.hotSeatTest;
 
   // Part 2 Preparation timer (60s)
   const [prepSeconds, setPrepSeconds] = useState(60);
@@ -101,7 +101,7 @@ export function LessonCard({
         <span className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
           {exam.cambridgeRef || "Cambridge IELTS Speaking"}
         </span>
-        <span className="text-[11px] text-zinc-500 font-sans truncate max-w-xs">{lesson.topic}</span>
+        <span className="text-xs text-subtle font-sans truncate max-w-xs">{lesson.topic}</span>
       </div>
 
       {/* Auto-Advance Notification Banner */}
@@ -119,7 +119,7 @@ export function LessonCard({
       {/* ============================================================== */}
       {currentStage === "part1" && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs font-mono text-zinc-500 pb-0.5">
+          <div className="flex items-center justify-between text-xs font-mono text-subtle pb-0.5">
             <span className="uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300">
               Part 1 • Introduction & Familiar Topics
             </span>
@@ -153,7 +153,7 @@ export function LessonCard({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1">
-                      <span className="font-mono text-xs font-bold text-zinc-400 dark:text-zinc-500 mt-0.5 flex-shrink-0">
+                      <span className="font-mono text-xs font-bold text-subtle mt-0.5 flex-shrink-0">
                         {String(idx + 1).padStart(2, "0")}.
                       </span>
                       <div className="space-y-1.5 flex-1">
@@ -161,7 +161,7 @@ export function LessonCard({
                           isActive
                             ? "text-zinc-950 dark:text-zinc-50 font-medium"
                             : isPast
-                            ? "text-zinc-600 dark:text-zinc-400"
+                            ? "text-zinc-600"
                             : "text-zinc-800 dark:text-zinc-200"
                         }`}>
                           {q}
@@ -169,7 +169,7 @@ export function LessonCard({
 
                         <div className="flex items-center gap-2 pt-0.5">
                           {isActive && (
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs font-mono text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs font-mono text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40">
                               <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
@@ -178,13 +178,13 @@ export function LessonCard({
                             </div>
                           )}
                           {isPast && (
-                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xs font-mono text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
                               <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
                               <span>Completed</span>
                             </div>
                           )}
                           {isFuture && (
-                            <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                            <span className="font-mono text-xs uppercase tracking-wider text-subtle">
                               Upcoming
                             </span>
                           )}
@@ -205,7 +205,7 @@ export function LessonCard({
                             onSpeakText?.(q, 1.0);
                           }
                         }}
-                        className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xs cursor-pointer transition-colors"
+                        className="p-1.5 text-subtle hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xs cursor-pointer transition-colors"
                         title="Replay examiner inquiry"
                       >
                         <Volume2 className="w-3.5 h-3.5" />
@@ -244,7 +244,7 @@ export function LessonCard({
               <button
                 type="button"
                 onClick={() => setIsPrepActive(!isPrepActive)}
-                className="px-2.5 py-1 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-[10px] font-bold cursor-pointer hover:opacity-90 flex items-center gap-1.5 transition-all"
+                className="px-2.5 py-1 border border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-bold cursor-pointer hover:opacity-90 flex items-center gap-1.5 transition-all"
               >
                 {isPrepActive ? (
                   <>
@@ -263,7 +263,7 @@ export function LessonCard({
                   setIsPrepActive(false);
                   setPrepSeconds(60);
                 }}
-                className="p-1 border border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer transition-colors"
+                className="p-1 border border-zinc-200 dark:border-zinc-800 text-subtle hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer transition-colors"
                 title="Reset timer"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -271,7 +271,7 @@ export function LessonCard({
             </div>
 
             {/* Speaking Stats */}
-            <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
+            <div className="flex items-center gap-2 text-xs font-mono text-subtle">
               <span>Speaking: {Math.floor(speechSeconds / 60)}m {speechSeconds % 60}s</span>
               <span>•</span>
               <span>Words: {studentWordCount}</span>
@@ -288,13 +288,13 @@ export function LessonCard({
 
           {/* Official Candidate Task Card */}
           <div className="p-5 sm:p-6 border border-zinc-300 dark:border-zinc-700/80 bg-white dark:bg-zinc-950 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2 text-[10px] font-mono text-zinc-500 font-bold">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2 text-xs font-mono text-subtle font-bold">
               <span>Part 2 • Candidate Cue Card</span>
               <span>1 to 2 Minutes</span>
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs text-zinc-500 font-mono">
+              <p className="text-xs text-subtle font-mono">
                 You should speak for 1 to 2 minutes on this topic:
               </p>
               <h3 className="font-serif font-bold text-lg sm:text-xl text-zinc-900 dark:text-zinc-100 tracking-tight">
@@ -303,7 +303,7 @@ export function LessonCard({
             </div>
 
             <div className="p-3.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 space-y-2">
-              <span className="font-mono text-[10px] uppercase font-bold text-zinc-600 dark:text-zinc-400 block">
+              <span className="font-mono text-xs uppercase font-bold text-zinc-600 block">
                 You should say:
               </span>
               <ul className="space-y-1.5 font-serif text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 pl-1">
@@ -322,19 +322,19 @@ export function LessonCard({
 
             {/* Candidate Digital Prep Scratchpad (Module 1 Blueprint) */}
             <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-1.5 font-mono text-xs">
-              <div className="flex items-center justify-between text-[10px] text-zinc-500 font-bold">
+              <div className="flex items-center justify-between text-xs text-subtle font-bold">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3 text-amber-500" />
                   Candidate Scratchpad (60s Notes)
                 </span>
-                <span className="text-zinc-400 font-normal">Optional</span>
+                <span className="text-subtle font-normal">Optional</span>
               </div>
               <textarea
                 value={candidateNotes}
                 onChange={(e) => setCandidateNotes(e.target.value)}
                 placeholder="Jot down quick WH- hooks (What, When, Who, Why) to guide your 2-minute narrative..."
                 rows={3}
-                className="w-full font-mono text-xs p-2.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors resize-none"
+                className="w-full font-mono text-xs p-2.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-subtle focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors resize-none"
               />
             </div>
           </div>
@@ -346,7 +346,7 @@ export function LessonCard({
       {/* ============================================================== */}
       {currentStage === "part3" && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs font-mono text-zinc-500 pb-0.5">
+          <div className="flex items-center justify-between text-xs font-mono text-subtle pb-0.5">
             <span className="uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300">
               Part 3 • Analytical Discussion
             </span>
@@ -380,7 +380,7 @@ export function LessonCard({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1">
-                      <span className="font-mono text-xs font-bold text-zinc-400 dark:text-zinc-500 mt-0.5 flex-shrink-0">
+                      <span className="font-mono text-xs font-bold text-subtle mt-0.5 flex-shrink-0">
                         {String(idx + 1).padStart(2, "0")}.
                       </span>
                       <div className="space-y-1.5 flex-1">
@@ -388,7 +388,7 @@ export function LessonCard({
                           isActive
                             ? "text-zinc-950 dark:text-zinc-50 font-medium"
                             : isPast
-                            ? "text-zinc-600 dark:text-zinc-400"
+                            ? "text-zinc-600"
                             : "text-zinc-800 dark:text-zinc-200"
                         }`}>
                           {q}
@@ -396,7 +396,7 @@ export function LessonCard({
 
                         <div className="flex items-center gap-2 pt-0.5">
                           {isActive && (
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs font-mono text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs font-mono text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40">
                               <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
@@ -405,13 +405,13 @@ export function LessonCard({
                             </div>
                           )}
                           {isPast && (
-                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xs font-mono text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
                               <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
                               <span>Completed</span>
                             </div>
                           )}
                           {isFuture && (
-                            <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                            <span className="font-mono text-xs uppercase tracking-wider text-subtle">
                               Upcoming
                             </span>
                           )}
@@ -432,7 +432,7 @@ export function LessonCard({
                             onSpeakText?.(q, 1.0);
                           }
                         }}
-                        className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xs cursor-pointer transition-colors"
+                        className="p-1.5 text-subtle hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xs cursor-pointer transition-colors"
                         title="Replay examiner inquiry"
                       >
                         <Volume2 className="w-3.5 h-3.5" />

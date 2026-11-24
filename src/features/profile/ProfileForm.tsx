@@ -2,9 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { Button } from "@/ui/primitives";
-import { DEFAULT_PROFILE, type CandidateProfile, type TargetBand } from "@/lib/types";
+import type { CandidateProfile, TargetBand } from "@/lib/types";
 import { saveProfile } from "@/lib/profile";
-import { refreshStarterScripts } from "@/lib/master-script";
 
 type Fields = Pick<
   CandidateProfile,
@@ -70,8 +69,8 @@ export function ProfileForm({
         }
       : {
           ...BLANK,
-          // Keep a name given during onboarding; never pre-fill the example profile.
-          preferredName: profile.preferredName !== DEFAULT_PROFILE.preferredName ? profile.preferredName : "",
+          // Keep a name given during onboarding.
+          preferredName: profile.preferredName,
         }
   );
   const set = <K extends keyof Fields>(k: K, v: Fields[K]) => setF((prev) => ({ ...prev, [k]: v }));
@@ -88,7 +87,6 @@ export function ProfileForm({
       hasCompletedGrill: true,
     };
     saveProfile(next);
-    refreshStarterScripts(next);
     onSaved?.(next);
   };
 

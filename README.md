@@ -1,34 +1,21 @@
 # Accent Shadowing Gym
 
-> Build a British RP accent through **shadowing**: listen to a native model, copy it phrase by phrase, and repeat until the accent lives in your muscle memory.
+> Build a British RP accent through **shadowing**: listen to a model voice, copy it phrase by phrase, and repeat until the accent lives in your muscle memory.
 
 ## The idea
 
-Shadowing is how people absorb an accent: you copy the rhythm, stress and sounds of a master voice, repeatedly, until your mouth does it without thinking. This app is a gym for that.
+Shadowing is how people absorb an accent: you copy the rhythm, stress and sounds of a fluent voice, again and again, until your mouth does it without thinking. This app is a gym for that.
 
 1. **Listen**: hear a British RP model (Gemini TTS) read a script, with stressed words marked.
-2. **Shadow**: the model speaks one breath-group at a time and you repeat it straight away. Each of your repeats is kept in memory so you can play it back against the model.
-3. **Deliver**: say the whole answer yourself. Gemini listens to the **model clip and your take together** and scores your accent (sounds, stress, rhythm, intonation), plus one thing to fix on the next rep.
+2. **Shadow**: the model speaks one breath group at a time and you repeat it straight away. Each repeat is kept in memory so you can play it back against the model.
+3. **Deliver**: say the whole answer. Gemini listens to the **model clip and your take together** and scores your accent (sounds, stress, rhythm, intonation), with one thing to fix on the next rep and a before/after against your last take.
 
-Reps, per-script best scores, a daily streak and your weakest accent area are tracked locally on the Progress page. Nothing leaves your browser except the audio sent for coaching, and no recordings are stored. Settings lets you download a backup file and restore it on another device.
+Progress (streak, score trend, weakest accent area, practice calendar) is tracked in your browser. Nothing leaves it except the audio sent for coaching, and recordings are never stored. Settings lets you download a backup and restore it on another device. The app is installable (PWA) and opens offline.
 
 ### Where the scripts come from
 
-The **Cambridge-style library** has 12 original model answers (Parts 1, 2 and 3) on themes that recur in Cambridge IELTS Speaking tests: food, technology, weather, hobbies, buildings, advice, quiet places, health habits, heritage, AI, the environment and the arts. They are written for this app, not copied from any book (`src/lib/shadowing-library.ts`). The gym also ships with starter scripts built from your profile. For scripts about **your** life, use **Capture new scripts**: a short unscripted Cambridge-style interview (Parts 1-3) with a live Gemini examiner. Your answers are rewritten into natural high-band spoken English (with breath groups, stressed words and collocations); you choose which to keep, and nothing you already have is replaced. An unfinished interview is saved, so you can still get a report from it later. The interview also produces an IELTS band report.
-
-## Tech stack
-
-- Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4
-- `@google/genai`: Gemini Live (examiner), Gemini TTS (RP model audio), Gemini Flash (scripts, coaching)
-- Browser: Web Audio, MediaRecorder, Web Speech API (optional live transcript), `localStorage` + IndexedDB (audio cache)
-
-```
-Browser ── /api/model-audio ──▶ Gemini TTS  (British RP WAV, cached in IndexedDB)
-        ── /api/mirror-coach ─▶ Gemini      (model clip + your take -> accent scores, fixes)
-        ── /api/upgrade-script ▶ Gemini     (interview transcript -> Band 8.5+ scripts)
-        ── /api/token ────────▶ Gemini      (single-use token for the live examiner)
-        ── /api/feedback ─────▶ Gemini      (IELTS band report)
-```
+- **IELTS Speaking library**: 12 original, Cambridge-style model answers for Parts 1, 2 and 3, written for this app (`src/lib/shadowing-library.ts`).
+- **Your own scripts**: a short spoken interview with a live Gemini examiner. Your answers are rewritten into natural, high-band spoken English, using only what you actually said; you choose which to keep and nothing you already have is replaced. An unfinished interview is saved so you can still get a report from it. The interview also produces an IELTS band report (graded from the transcript, so its pronunciation score is an estimate; audio-based accent feedback is what practice is for).
 
 ## Getting started
 
@@ -40,49 +27,39 @@ cp .env.example .env.local   # then set GEMINI_API_KEY
 npm run dev
 ```
 
-Open http://localhost:3000 and allow microphone access. Use headphones so the model's voice isn't picked up by your mic.
+Open http://localhost:3000 in a normal browser window, allow the microphone, and use headphones so the model's voice isn't picked up by your mic.
 
 ### Configuration (`.env.local`)
 
 | Variable | Purpose | Default |
 | :--- | :--- | :--- |
 | `GEMINI_API_KEY` | Required, server-side only | none |
-| `TTS_MODELS` | RP model-audio models, tried in order | `gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-3.8-flash-lite-tts` |
-| `TTS_VOICE` | Prebuilt voice for the model clip | `Puck` |
+| `TTS_MODELS` | Model-voice models, tried in order | `gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-3.8-flash-lite-tts` |
+| `TTS_VOICE` | Default prebuilt voice for the model clip (learners can change it in Settings) | `Puck` |
 | `LIVE_MODEL`, `LIVE_VOICE` | Live examiner model and voice | see `.env.example` |
-| `TEXT_MODELS` | Text/coaching models, tried in order | see `.env.example` |
+| `TEXT_MODELS` | Coaching, grading and script models, tried in order | see `.env.example` |
 | `ALLOWED_ORIGINS` | Extra origins allowed to call the API | none (same-origin only) |
 
-If Gemini TTS is unavailable the gym falls back to your browser's speech voice and shows a notice. That voice may not be British RP.
+If Gemini TTS is unavailable the app falls back to the browser's speech voice and says so; that voice may not be British.
 
 ## Scripts
 
 | Command | Description |
 | :--- | :--- |
 | `npm run dev` | Development server |
-| `npm run build` | Production build and type check |
-| `npm run start` | Serve the production build |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build (enables the service worker) |
 | `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript without emitting |
+| `npm run typecheck` | Generate route types, then TypeScript |
 | `npm run test` | Unit tests (Vitest) |
-| `npm run check` | Lint, typecheck and tests together (CI also runs the build) |
+| `npm run check` | Lint, typecheck and tests (CI also runs the build) |
 
-## Project layout
+## Documentation
 
-- Routes: `/` (Today, with a first-run welcome), `/library`, `/practice/[scriptId]` (Listen, Shadow, Deliver, Feedback), `/progress` (score trend, focus area, practice calendar), `/capture` (live interview), `/capture/report` (choose which new scripts to keep, plus the band report) and `/settings` (model voice and speed, profile, theme, backup, restore and erase)
-- `src/features/capture/`: `useCaptureSession` (reducer-driven live interview), grading pipeline, setup/live/report screens
-- `src/features/practice/`: practice hooks (`useModelPlayer`, `useRecorder`, `useShadowLoop`, `useCoach`) and panels
-- `src/features/{today,library,shell}/`: Today and Library screens, app shell with nav and theme toggle
-- `src/ui/primitives.tsx`: design-system primitives; colour tokens live in `src/app/globals.css`
-- `src/app/api/model-audio`, `mirror-coach`, `upgrade-script`, `token`, `feedback`: server routes
-- `src/lib/model-audio.ts`: RP clip fetch + IndexedDB cache
-- `src/lib/master-script.ts`: script vault, per-script stats, day streak (`localStorage`)
-- `src/domain/`: pure logic and shared API contracts (Zod), unit-tested
-- `src/storage/`: versioned local storage with migrations, attempts history, backup export/import, wipe
-- `src/server/`: server-only Gemini client, env config and allowlists, request guard (origin, size, rate limit)
-- `src/components/`: live-interview widgets (`VoiceOrb`, `LessonCard`, `TranscriptFeed`, `LatencyHUD`), `FeedbackReport` and the profile intake `CandidateGrillModal`
-
-More detail: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), [CONCEPTS.md](CONCEPTS.md), [docs/](docs).
+- [docs/PRODUCT.md](docs/PRODUCT.md): who it's for, the core loop, screens and principles
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): code layout, data, API, security and how to extend it
+- [CONCEPTS.md](CONCEPTS.md): the learning method and Gemini Live API notes
+- [docs/IELTS_SPEAKING_MASTERY_GUIDE.md](docs/IELTS_SPEAKING_MASTERY_GUIDE.md): IELTS Speaking background
 
 ## License
 

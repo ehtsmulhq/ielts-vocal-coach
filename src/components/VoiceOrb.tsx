@@ -198,9 +198,9 @@ export function VoiceOrb({
   return (
     <div className="flex flex-col items-center justify-between gap-4 w-full">
       {/* Oscilloscope Header */}
-      <div className="w-full flex items-center justify-between font-mono text-[10px] tracking-widest text-zinc-500 uppercase border-b border-zinc-200 dark:border-zinc-800 pb-2">
+      <div className="w-full flex items-center justify-between font-mono text-xs tracking-widest text-subtle uppercase border-b border-zinc-200 dark:border-zinc-800 pb-2">
         <span className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300">
-          <Radio className="w-3 h-3 text-zinc-500" />
+          <Radio className="w-3 h-3 text-subtle" />
           Acoustic Oscilloscope & Spectrum Monitor
         </span>
         <span>24.0 kHz PCM</span>
@@ -208,10 +208,10 @@ export function VoiceOrb({
 
       {/* Main Canvas Monitor */}
       <div className="relative w-full border border-zinc-800 rounded-sm overflow-hidden bg-zinc-950 shadow-inner">
-        <canvas ref={canvasRef} width={420} height={180} className="w-full h-44 block" />
+        <canvas ref={canvasRef} width={420} height={180} className="w-full h-44 block" aria-hidden="true" />
 
         {/* Live Status Overlay Badge */}
-        <div className="absolute bottom-2 right-2 flex items-center gap-2 font-mono text-[9px] px-2 py-0.5 bg-zinc-900/90 border border-zinc-700 text-zinc-300">
+        <div className="absolute bottom-2 right-2 flex items-center gap-2 font-mono text-xs px-2 py-0.5 bg-zinc-900/90 border border-zinc-700 text-zinc-300">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
               activeSpeaker === "student"
@@ -239,7 +239,7 @@ export function VoiceOrb({
         <button
           type="button"
           onClick={onToggleMute}
-          className={`flex items-center justify-center gap-1.5 py-2 px-3 border font-mono text-[10px] uppercase transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 py-2 px-3 border font-mono text-xs uppercase transition-all cursor-pointer ${
             isMuted
               ? "bg-rose-900/20 border-rose-600 text-rose-400 font-bold"
               : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400"
@@ -253,7 +253,7 @@ export function VoiceOrb({
         <button
           type="button"
           onClick={() => onChangeMicMode(micMode === "continuous" ? "push-to-talk" : "continuous")}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-mono text-[10px] uppercase hover:border-zinc-400 transition-all cursor-pointer"
+          className="flex items-center justify-center gap-1.5 py-2 px-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-mono text-xs uppercase hover:border-zinc-400 transition-all cursor-pointer"
         >
           <Radio className="w-3 h-3" />
           <span>{micMode === "continuous" ? "CONTINUOUS" : "PUSH-TO-TALK"}</span>
@@ -264,7 +264,7 @@ export function VoiceOrb({
           <button
             type="button"
             onClick={onToggleSpeechProtection}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 border font-mono text-[10px] uppercase transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 border font-mono text-xs uppercase transition-all cursor-pointer ${
               speechProtection === "protected"
                 ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 font-bold"
                 : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -280,7 +280,7 @@ export function VoiceOrb({
           type="button"
           onClick={onInterruptTutor}
           disabled={!tutorSpeaking}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 disabled:opacity-40 font-mono text-[10px] uppercase hover:border-zinc-400 transition-all cursor-pointer"
+          className="flex items-center justify-center gap-1.5 py-2 px-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 disabled:opacity-40 font-mono text-xs uppercase hover:border-zinc-400 transition-all cursor-pointer"
         >
           <FastForward className="w-3 h-3" />
           <span>INTERRUPT</span>
@@ -289,7 +289,7 @@ export function VoiceOrb({
 
       {/* Push to talk instruction bar */}
       {micMode === "push-to-talk" && (
-        <div className="w-full text-center font-mono text-[10px] text-zinc-500 py-1 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="w-full text-center font-mono text-xs text-subtle py-1 border-t border-zinc-200 dark:border-zinc-800">
           Hold <kbd className="px-1 bg-zinc-200 dark:bg-zinc-800 font-bold">Spacebar</kbd> to speak
         </div>
       )}

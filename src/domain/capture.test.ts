@@ -9,7 +9,7 @@ import {
   PART2_MIN_WORDS,
 } from "./capture";
 import type { Lesson, TranscriptEntry } from "@/lib/types";
-import { createDefaultMasterRepository } from "@/lib/master-script";
+import { LEGACY_STARTERS } from "@/test/fixtures";
 import { SHADOWING_LIBRARY } from "@/lib/shadowing-library";
 
 const lesson = {
@@ -76,7 +76,7 @@ describe("auto-advance", () => {
 });
 
 describe("script merge", () => {
-  const starters = createDefaultMasterRepository().items;
+  const starters = LEGACY_STARTERS;
   const proposed = assignScriptIds(SHADOWING_LIBRARY.slice(0, 2), 123);
 
   it("assigns unique ids that never reuse existing ones", () => {

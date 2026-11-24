@@ -47,11 +47,11 @@ export function TranscriptFeed({
   };
 
   return (
-    <div className="w-full flex flex-col h-[400px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4 overflow-hidden font-sans">
+    <div role="log" aria-label="Interview transcript" className="w-full flex flex-col h-[400px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4 overflow-hidden font-sans">
       {/* Journal Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+      <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800 font-mono text-xs uppercase tracking-widest text-subtle">
         <div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300">
-          <Terminal className="w-3.5 h-3.5 text-zinc-500" />
+          <Terminal className="w-3.5 h-3.5 text-subtle" />
           <span>PHONETIC TRANSCRIPTION JOURNAL</span>
         </div>
 
@@ -74,7 +74,7 @@ export function TranscriptFeed({
       {/* Messages Feed */}
       <div className="flex-1 overflow-y-auto pt-3 space-y-3 pr-1 scrollbar-thin">
         {entries.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-400 dark:text-zinc-600 font-mono text-xs space-y-2">
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 text-subtle font-mono text-xs space-y-2">
             <p>[ ACOUSTIC LOG STANDBY — WAITING FOR AUDIO INPUT ]</p>
           </div>
         ) : (
@@ -87,7 +87,7 @@ export function TranscriptFeed({
                 key={entry.id}
                 className="p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 space-y-1.5"
               >
-                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                <div className="flex items-center justify-between font-mono text-xs uppercase tracking-wider text-subtle">
                   <div className="flex items-center gap-2">
                     <span
                       className={`font-bold ${
@@ -107,7 +107,7 @@ export function TranscriptFeed({
 
                 {/* Replay Vocal Correction */}
                 {isTutor && onReplay && (
-                  <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between font-mono text-[10px]">
+                  <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between font-mono text-xs">
                     <button
                       type="button"
                       onClick={() => handlePlayMessage(entry)}
@@ -124,13 +124,13 @@ export function TranscriptFeed({
                         </>
                       ) : (
                         <>
-                          <Volume2 className="w-3 h-3 text-zinc-500" />
+                          <Volume2 className="w-3 h-3 text-subtle" />
                           <span>[ REPLAY PHONETIC AUDIO ]</span>
                         </>
                       )}
                     </button>
 
-                    <span className="text-zinc-400">
+                    <span className="text-subtle">
                       {entry.text.split(/\s+/).filter(Boolean).length} WORDS
                     </span>
                   </div>

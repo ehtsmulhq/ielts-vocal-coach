@@ -15,11 +15,11 @@ export interface Pack {
  * generic starter scripts, so the curated pack is listed (and suggested) first.
  */
 export function buildPacks(myScripts: ScriptItem[], hasCaptured: boolean): Pack[] {
-  const mine: Pack = hasCaptured
+  const mine: Pack = hasCaptured || myScripts.length === 0
     ? {
         id: "mine",
         name: "My scripts",
-        description: "Your own answers, upgraded into natural spoken English. Capture again to refresh them.",
+        description: "Your own answers, rewritten into natural spoken English. Capture an interview to add more.",
         scripts: myScripts,
       }
     : {

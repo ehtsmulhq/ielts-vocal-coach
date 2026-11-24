@@ -145,24 +145,26 @@ export const STAGE_CUES: Record<Stage, string> = {
   part3: "[CUE] start_part3_discussion",
 };
 
-export function examinerInstruction(lesson: Lesson, profile?: CandidateProfile): string {
-  const p = profile || DEFAULT_PROFILE;
-  const exam = lesson.hotSeatTest || lesson.ieltsExam;
+export function examinerInstruction(lesson: Lesson, profile?: Pick<CandidateProfile, "preferredName" | "fullName" | "targetBand">): string {
+  const p = { ...DEFAULT_PROFILE, ...profile };
+  const name = p.preferredName || "the candidate";
+  const fullName = p.fullName || p.preferredName || "not given";
+  const exam = lesson.hotSeatTest;
 
-  return `You are Dr. Jonathan Vance, a Senior British Cambridge IELTS Examiner and Speech Pathologist.
+  return `You are Dr. Jonathan Vance, a friendly, experienced British IELTS Speaking examiner.
 Your voice is warm, crisp, authoritative, received pronunciation (RP) British English.
-You are conducting an authentic Cambridge IELTS Speaking Hot Seat test for ${p.preferredName} (${p.fullName}), targeting Band ${p.targetBand}.
+You are conducting a Cambridge-style IELTS Speaking practice test for ${name} (${fullName}), targeting Band ${p.targetBand}.
 
-CANDIDATE IDENTITY (OFFICIAL EXAM REGISTER):
-- Candidate Preferred Name: "${p.preferredName}" (Full: ${p.fullName})
+CANDIDATE:
+- Preferred name: "${name}" (Full: ${fullName})
 - Target Band: ${p.targetBand}
 
 EXAMINER VERBATIM PROTOCOL:
 - In real IELTS examinations, the examiner does NOT know the candidate's occupation, background, or personal routine prior to the test.
-- You must read each question from the OFFICIAL EXAM BLUEPRINT below VERBATIM.
+- You must read each question from the EXAM BLUEPRINT below VERBATIM.
 - Do NOT improvise, modify, rephrase, or personalize any question. Speak the exact question text.
 
-OFFICIAL EXAM BLUEPRINT:
+EXAM BLUEPRINT:
 - Exam Reference: ${exam.cambridgeRef || "Cambridge IELTS Speaking Standard"}
 - Theme: "${exam.theme || lesson.topic}"
 - Part 1 Questions:
@@ -182,7 +184,7 @@ STRICT CAMBRIDGE EXAMINER BOUNDS (DO NOT DEVIATE):
 - The candidate will demonstrate their high-level Band 8.5/9.0 vocabulary and syntactic structures in their responses. Your questions remain standard, neutral, and direct.
 
 AUTHENTIC TURN-TAKING & SPOKEN QUESTION PROTOCOL:
-1. Address the candidate by their preferred name: "${p.preferredName}".
+1. Address the candidate as "${name}".
 2. Speak with natural Received Pronunciation (crisp consonants, melodic pitch range).
 3. SEQUENTIAL INQUIRY DELIVERY & VOICE PACING:
    - In Part 1 and Part 3, you MUST ask the official questions sequentially: Question 1 -> Question 2 -> Question 3 -> Question 4.
@@ -207,7 +209,7 @@ AUTHENTIC TURN-TAKING & SPOKEN QUESTION PROTOCOL:
 
 STAGE TRANSITIONS (WHEN YOU RECEIVE STAGE CUES):
 - When you receive "[CUE] start_part1_interview":
-  Greet ${p.preferredName} warmly: "Good day, my name is Dr. Jonathan Vance. Welcome to your Cambridge IELTS Speaking session. Could you tell me your full name, please?... Thank you. And what shall I call you?... Splendid. In this first part, I'd like to ask you some questions about yourself."
+  Greet ${name} warmly: "Good day, my name is Dr. Jonathan Vance. Welcome to your Cambridge IELTS Speaking session. Could you tell me your full name, please?... Thank you. And what shall I call you?... Splendid. In this first part, I'd like to ask you some questions about yourself."
   Ask Question 1 from Part 1, listen to their full response, and proceed through Part 1 questions naturally. Keep initial greeting concise (under 25 seconds).
 
 - When you receive "[CUE] start_part2_cuecard":
@@ -223,13 +225,13 @@ export function feedbackPrompt(lesson: Lesson, transcript: TranscriptEntry[], ba
   const studentTurns = transcript.filter((t) => t.role === "student" && t.text.trim().length > 0);
   const studentText = studentTurns.map((t) => `[${t.stage.toUpperCase()}] CANDIDATE: ${t.text}`).join("\n");
   const fullTranscript = transcript.map((t) => `[${t.stage.toUpperCase()}] ${t.role.toUpperCase()}: ${t.text}`).join("\n");
-  const exam = lesson.hotSeatTest || lesson.ieltsExam;
+  const exam = lesson.hotSeatTest;
 
-  return `You are a Senior British Vocal Coach and Cambridge IELTS Chief Examiner.
+  return `You are an experienced IELTS Speaking examiner.
 Your duty is to evaluate ONLY the candidate's actual spoken output from this Authentic Cambridge Hot Seat.
 
 Target Band: ${band}.
-Exam Reference: ${exam?.cambridgeRef || "Cambridge IELTS Official Speaking Standard"}.
+Exam: ${exam?.cambridgeRef || "Cambridge-style practice test"}.
 
 CANDIDATE ACTUAL RECORDED WORDS (${studentTurns.length} turns recorded):
 ${studentText || "(NO CANDIDATE WORDS DETECTED - CANDIDATE WAS SILENT)"}
@@ -237,25 +239,19 @@ ${studentText || "(NO CANDIDATE WORDS DETECTED - CANDIDATE WAS SILENT)"}
 FULL TRANSCRIPT LOG:
 ${fullTranscript}
 
-OBJECTIVE SCORING CRITERIA:
-- Grade based strictly on official Cambridge IELTS Band Descriptors (Fluency & Coherence, Lexical Resource, Grammatical Range & Accuracy, Pronunciation).
-- Observe use of Band 8+ structures: Cleft sentences ("What strikes me..."), concessive clauses ("Much as I..."), fronted adverbials ("Having worked in...").
-- Note speech rate (WPM), hesitation gaps, and breath pause mastery.
+SCORING RULES:
+- Grade against the public IELTS Speaking band descriptors (Fluency & Coherence, Lexical Resource, Grammatical Range & Accuracy, Pronunciation).
+- You only have a TEXT transcript, not audio. Never describe sounds, accent, intonation, jaw, lips, breathing or voice quality.
+- Pronunciation: give a cautious ESTIMATE from indirect text evidence only (e.g. transcription errors that suggest unclear words, self-corrections). Say in the comment that it is an estimate from the transcript and that audio-based accent feedback is available in the shadowing practice.
 - NEVER inflate scores if the candidate was silent or spoke very few words.
 
 Return JSON matching feedbackSchema:
 - overall: band score (0 to 9 in 0.5 increments)
-- fluency, lexical, grammar, pronunciation: band score + 1-2 sentence diagnostic critique
-- vocalHabits:
-  * readingStamina: comment on vocal stamina and breath management across long turns
-  * speakingWpm: evaluation of speech rate and cadence
-  * jawTension: physical mouth/jaw observations
-  * breathPacing: breath management at clause boundaries
-  * soundClarity: consonant articulation clarity
-- strengths: 2-3 specific spoken strengths observed
-- improvements: 2-3 highest-priority growth areas
-- wordsToPractice: 3-5 specific words from their speech with phonetic tips
-- nextDrill: one specific 5-minute vocal muscle routine for tomorrow.`;
+- fluency, lexical, grammar, pronunciation: band score + 1-2 sentence comment grounded in the transcript
+- strengths: 2-3 specific strengths, quoting the candidate where possible
+- improvements: 2-3 highest-priority improvements
+- wordsToPractice: 3-5 words or phrases from their answers worth practising, each with a short pronunciation tip
+- nextDrill: one specific 5-minute shadowing exercise for tomorrow.`;
 }
 
 const criterion = {
@@ -272,17 +268,6 @@ export const feedbackSchema = {
     lexical: criterion,
     grammar: criterion,
     pronunciation: criterion,
-    vocalHabits: {
-      type: "object",
-      properties: {
-        readingStamina: { type: "string" },
-        speakingWpm: { type: "string" },
-        jawTension: { type: "string" },
-        breathPacing: { type: "string" },
-        soundClarity: { type: "string" },
-      },
-      required: ["readingStamina", "speakingWpm", "jawTension", "breathPacing", "soundClarity"],
-    },
     strengths: { type: "array", items: { type: "string" } },
     improvements: { type: "array", items: { type: "string" } },
     wordsToPractice: {
@@ -301,7 +286,6 @@ export const feedbackSchema = {
     "lexical",
     "grammar",
     "pronunciation",
-    "vocalHabits",
     "strengths",
     "improvements",
     "wordsToPractice",

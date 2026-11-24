@@ -34,6 +34,11 @@ export function LibraryScreen() {
             {pack.id === "mine" && <ButtonLink href="/capture" size="sm">Capture new scripts</ButtonLink>}
           </div>
 
+          {pack.scripts.length === 0 && (
+            <p className="rounded-[var(--radius-card)] border border-dashed border-line p-6 text-center text-sm text-muted">
+              No personal scripts yet. Answer a short spoken interview and your own answers become scripts to shadow.
+            </p>
+          )}
           <ul className="grid gap-3 sm:grid-cols-2">
             {pack.scripts.map((script) => {
               const stats = vault.itemStats?.[script.id];

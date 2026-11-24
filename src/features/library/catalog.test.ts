@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildPacks, findScript, neighbours, suggestScript } from "./catalog";
-import { createDefaultMasterRepository } from "@/lib/master-script";
+import { LEGACY_STARTERS } from "@/test/fixtures";
 import { SHADOWING_LIBRARY } from "@/lib/shadowing-library";
 
-const starters = createDefaultMasterRepository().items;
+const starters = LEGACY_STARTERS;
 
 describe("catalog", () => {
   it("lists the curated pack first until the learner has captured their own scripts", () => {

@@ -3,6 +3,7 @@ import { createStore, decodeEnvelope, encodeEnvelope, memoryStorage, subscribeSt
 import { applyBackup, buildBackup, BACKUP_FORMAT } from "./backup";
 import { STORAGE_KEYS } from "./registry";
 import { migrateScriptVault, createDefaultMasterRepository } from "@/lib/master-script";
+import { LEGACY_STARTERS } from "@/test/fixtures";
 import { migrateProfile } from "@/lib/profile";
 import { DEFAULT_PROFILE } from "@/lib/types";
 
@@ -91,7 +92,7 @@ describe("createStore", () => {
 
 describe("migrations of today's stored data", () => {
   it("keeps a legacy (un-enveloped) script vault and adds missing fields", () => {
-    const legacy = createDefaultMasterRepository();
+    const legacy = { ...createDefaultMasterRepository(), items: LEGACY_STARTERS };
     const { itemStats: _i, dayStreak: _d, ...withoutNewFields } = legacy;
     void _i;
     void _d;
@@ -105,7 +106,7 @@ describe("migrations of today's stored data", () => {
   it("drops malformed script items and recovers from garbage", () => {
     const migrated = migrateScriptVault({ items: [{ id: "ok", upgradedScript: "Hi" }, { bad: true }, null] });
     expect(migrated.items.map((i) => i.id)).toEqual(["ok"]);
-    expect(migrateScriptVault("garbage").items.length).toBeGreaterThan(0);
+    expect(migrateScriptVault("garbage").items).toEqual([]);
   });
 
   it("merges a stored profile onto the defaults", () => {
