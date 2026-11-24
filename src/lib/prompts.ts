@@ -1,182 +1,113 @@
-import type { Lesson, LessonRequest, Stage, TranscriptEntry } from "./types";
+import type { CandidateProfile, Lesson, LessonRequest, Stage, TranscriptEntry } from "./types";
+import { DEFAULT_PROFILE } from "./types";
+import { CAMBRIDGE_TEST_MODULES, CAMBRIDGE_FUNCTIONAL_FRAMES } from "./cambridge-materials";
 
 const BAND_GUIDE: Record<LessonRequest["band"], string> = {
-  "5.5": "intermediate (B1-B2): foundational connected speech, clear everyday sentences, 100-120 WPM cadence",
-  "6.5": "upper-intermediate (B2-C1): natural idioms, consonant cluster transitions (-sts, -dth, -lved), 120-140 WPM cadence",
-  "7.5": "advanced (C1+): sophisticated prose, academic vocabulary, rhythmic stress shifts, 130-150 WPM cadence",
+  "5.5": "Band 5.5 (Intermediate / B2): Focus on direct responses, eliminate 2s+ hesitations, establish baseline coherence, 100-120 WPM.",
+  "6.5": "Band 6.5 (Competent / C1): Natural collocations, cleft sentences ('What strikes me about...'), smooth thought-chunk breath pauses, 120-140 WPM.",
+  "7.5": "Band 7.5+ (Advanced / C2): Effortless flexibility, idiomatic precision, fronted adverbials, concessive clauses ('Much as I appreciate...'), 130-150 WPM.",
 };
 
 export const CURATED_THEMES = [
-  "Deep Ocean Trenches & Bioluminescent Life",
-  "The James Webb Space Telescope & Infrared Cosmology",
-  "The Neurobiology of Deep Sleep & Memory Consolidation",
-  "The Chemistry & Heritage of Artisan Sourdough Fermentation",
-  "High-Altitude Himalayan Mountaineering & Oxygen Physiology",
-  "Mycelial Networks: The Underground Communication of Forests",
-  "Ancient Polynesian Wayfinding & Celestial Wave Navigation",
-  "The Mechanical Precision of 18th Century Horology & Clocks",
-  "Acoustic Engineering of Concert Halls & Resonance Chambers",
-  "The Philosophy of Flow State & Deep Creative Focus",
-  "Subterranean Caverns & Extreme Speleology",
-  "Evolutionary Biology of Human Speech & Vocal Tracts",
-  "Traditional Japanese Woodblock Printing & Pigment Alchemy",
-  "Atmospheric Rivers & Extreme Global Weather Patterns",
-  "Archaeology of Lost Silk Road Caravans & Desert Trade",
-  "The Psychology of Lifelong Curiosity & Wonder",
-  "Coral Reef Soundscapes & Marine Midnight Biodiversity",
-  "The Aerodynamics of Soaring Birds & Albatross Dynamics",
-  "Analog Film Photography Revival in the Hyper-Digital Era",
-  "Volcanic Obsidian & Stone Age Glass Toolmaking",
-  "The Olfactory Sense: How Scent Rewires Human Memory",
-  "Solitary Atlantic Lighthouses & Maritime Survival",
-  "Medieval Islamic Observatories & Celestial Geometry",
-  "Extreme Desert Flora Adaptation in the Atacama",
-  "The Acoustic Ecology of Silence in Urban Megacities",
-  "The Art and Ergonomics of Handcrafted Fountain Pens",
-  "Subarctic Glaciology & Ice Core Climate Records",
-  "Traditional Nordic Timber Architecture & Stave Churches",
-  "Bioluminescent Fungi & Nighttime Rainforest Botany",
-  "The Mathematics of Origami & Deployable Space Solar Arrays",
+  "Cambridge 19: Urban Spaces, Modern Architecture & Community Living",
+  "Cambridge 19: Artificial Intelligence, Automation & Workplace Evolution",
+  "Cambridge 18: Environmental Sustainability & Climate Solutions",
+  "Cambridge 18: Health, Nutrition & Stress Inoculation",
+  "Cambridge 17: Travel, Global Mobility & Cross-Cultural Immersion",
+  "Cambridge 17: Creative Expression, Arts & Cultural Preservation",
+  "Cambridge 16: Interpersonal Communication & Mentorship Dynamics",
+  "Work & Specialization: Core Duties, Engineering & Career Evolution",
+  "Hometown Roots: Coastal Character, Heritage & Neighborhood Evolution",
+  "Living Space Ergonomics: Home Environment & Thought Sanctuary",
 ];
 
-export const PHONETIC_SETS = [
-  {
-    name: "Liquid Approximants & Retroflexion (/r/ vs /l/)",
-    drill1: { symbol: "/r/ vs /l/", name: "Liquid Approximant Contrast", cue: "Do not touch the roof of the mouth for British /r/; tap firmly on the upper tooth ridge for crisp /l/." },
-    drill2: { symbol: "-sts, -sks, -sps", name: "Dense Consonant Cluster Endings", cue: "Avoid swallowing the final plosive; articulate the /s/ hiss immediately followed by a clean stop (/t/ or /k/)." },
-  },
-  {
-    name: "Labiodental vs Bilabial Approximants (/v/ vs /w/)",
-    drill1: { symbol: "/v/ vs /w/", name: "Labiodental vs Bilabial Friction", cue: "Gently press upper front teeth against bottom lip for /v/; purse lips forward like blowing a candle for /w/." },
-    drill2: { symbol: "/p/ vs /b/ & /t/ vs /d/", name: "Aspirated Plosive Explosions", cue: "Build oral air pressure behind lips and tongue tip, then release with a sharp, punchy burst of air." },
-  },
-  {
-    name: "Interdental Fricatives & Sibilant Contrast (/θ/, /ð/ vs /s/, /z/)",
-    drill1: { symbol: "/θ/ vs /s/", name: "Interdental vs Alveolar Air Stream", cue: "Extend tongue tip lightly between incisors for /θ/; pull tongue back behind teeth for the high-frequency /s/ hiss." },
-    drill2: { symbol: "-ed Past Tense Endings", name: "Voiced vs Voiceless Suffix Stops", cue: "Distinguish unvoiced /t/ (stopped, cracked) from voiced /d/ (roamed, solved) and full syllables /ɪd/ (created)." },
-  },
-  {
-    name: "Palato-Alveolar Fricatives & Affricates (/ʃ/, /tʃ/, /dʒ/)",
-    drill1: { symbol: "/ʃ/ vs /tʃ/", name: "Continuous Hiss vs Stop-Affricate", cue: "Round lips and arch tongue blade for continuous /ʃ/; block air completely with tongue before popping /tʃ/." },
-    drill2: { symbol: "/iː/ vs /ɪ/", name: "Tense Long Vowel vs Lax Short Vowel", cue: "Spread mouth into an exaggerated smile with high tongue for /iː/ (reach); drop jaw slightly and relax for /ɪ/ (rich)." },
-  },
-  {
-    name: "Medial & Terminal Clusters (-dth, -lved, -ntly)",
-    drill1: { symbol: "-dth & -ths", name: "Dental Suffix Transitions", cue: "Move smoothly from alveolar tongue position into interdental /θ/ without adding an extra vowel sound." },
-    drill2: { symbol: "/ŋ/ vs /ŋk/", name: "Velar Nasals & Hard Releases", cue: "Seal the back of your tongue against the soft palate; let air ring through nasal cavity before clean release." },
-  },
-];
+export function lessonPrompt({
+  band,
+  topic,
+  cambridgeTestId,
+}: LessonRequest): string {
+  // Find official Cambridge module if selected
+  const cambridgeModule =
+    CAMBRIDGE_TEST_MODULES.find((m) => m.id === cambridgeTestId) ||
+    CAMBRIDGE_TEST_MODULES.find(
+      (m) =>
+        topic &&
+        (topic.toLowerCase().includes(m.id.toLowerCase()) ||
+          topic.toLowerCase().includes(m.title.toLowerCase()) ||
+          (topic.toLowerCase().includes(m.book.toLowerCase()) &&
+            topic.includes(String(m.testNumber))))
+    );
 
-export function lessonPrompt({ band, topic, focusArea }: LessonRequest): string {
-  const selectedTheme = topic?.trim() || CURATED_THEMES[Math.floor(Math.random() * CURATED_THEMES.length)];
-  const phoneticSet = PHONETIC_SETS[Math.floor(Math.random() * PHONETIC_SETS.length)];
+  const selectedTheme =
+    cambridgeModule?.title ||
+    topic?.trim() ||
+    CURATED_THEMES[Math.floor(Math.random() * CURATED_THEMES.length)];
 
-  return `You are a Senior British Vocal Coach, Speech Therapist, and Cambridge IELTS Examiner.
-Your PRIMARY MISSION is VOCAL MUSCLE REHABILITATION and EXTENDED SIGHT-READING STAMINA for English learners.
+  const cambridgeContext = cambridgeModule
+    ? `
+AUTHENTIC CAMBRIDGE IELTS BLUEPRINT:
+- Publication Reference: ${cambridgeModule.book} • Test ${cambridgeModule.testNumber}
+- Exam Domain: ${cambridgeModule.theme}
+- Official Part 1 Prompts: ${JSON.stringify(cambridgeModule.part1Questions)}
+- Official Part 2 Cue Card:
+  Title: "${cambridgeModule.part2CueCard.title}"
+  Bullets: ${cambridgeModule.part2CueCard.bullets.join(" | ")}
+  Closing: "${cambridgeModule.part2CueCard.closing}"
+- Official Part 3 Prompts: ${JSON.stringify(cambridgeModule.part3Questions)}
+- Target Lexical Collocations: ${JSON.stringify(cambridgeModule.recommendedVocabulary.map((v) => v.phrase))}
+`
+    : `
+CAMBRIDGE IELTS OFFICIAL SPECIFICATION:
+Base the exam simulation strictly on Cambridge IELTS Books 16–19 examiner standards:
+- Part 1: Exactly 3 authentic questions that start conversational around candidate identity and expand naturally.
+- Part 2: Authentic 4-part cue card prompt with 3 bullet inquiries and closing instruction.
+- Part 3: Deep analytical questions demanding comparative, speculative, and societal reasoning.
+`;
 
-Target Band: ${band} — ${BAND_GUIDE[band]}.
-MANDATORY SESSION THEME: "${selectedTheme}".
-Focus Mode: ${focusArea ?? "full"}.
+  return `You are a Senior British Vocal Coach, Speech Pathologist, and Cambridge IELTS Examiner.
+Your mission is to generate an authentic CAMBRIDGE IELTS SPEAKING HOT SEAT TEST for a live interactive interview.
 
-PHONETIC TARGET DIRECTIVES FOR THIS UNIQUE SESSION:
-- Drill 1 Sound: "${phoneticSet.drill1.symbol}" (${phoneticSet.drill1.name})
-  Guideline: ${phoneticSet.drill1.cue}
-- Drill 2 Sound: "${phoneticSet.drill2.symbol}" (${phoneticSet.drill2.name})
-  Guideline: ${phoneticSet.drill2.cue}
+ABSOLUTE RULE — NO CANDIDATE DATA IN QUESTIONS:
+You are generating GENERIC examiner questions. You do NOT know who the candidate is.
+You must NEVER reference any specific profession, job title, technical field, hobby, hometown,
+morning routine, or personal detail in any question. Real IELTS examiners ask the same standard
+questions to EVERY candidate regardless of their background.
 
-Generate a completely custom, highly imaginative, NON-REPETITIVE Vocal Gym session:
+Target IELTS Band: ${band} (${BAND_GUIDE[band]})
 
-1. vocalWorkout.motorDrills: Exactly 2 phonetic articulation drills matching the two target sounds above:
-   - Drill 1 MUST target "${phoneticSet.drill1.symbol}" (${phoneticSet.drill1.name}).
-   - Drill 2 MUST target "${phoneticSet.drill2.symbol}" (${phoneticSet.drill2.name}).
-   - Provide concrete biomechanical mouth/jaw cues, 4-5 words, and an original challenging sentence related to "${selectedTheme}".
+${cambridgeContext}
 
-2. vocalWorkout.longReading (CORE VOCAL STAMINA GYM):
-   - title: An inspiring, original editorial title about "${selectedTheme}".
-   - theme: "${selectedTheme}".
-   - wordCount: Exact word count (MUST BE STRICTLY BETWEEN 150 AND 220 WORDS).
-   - fullText: A rich, continuous 150-220 word long reading passage strictly exploring "${selectedTheme}". Write it in the style of an immersive BBC Radio 4 documentary or National Geographic feature. Use varied sentence rhythm, natural breath pauses, evocative vocabulary, and rhythmic momentum. NEVER output generic or repetitive filler.
-   - targetWpmRange: "120 - 140 WPM"
-   - thoughtChunks: 6 to 8 rhythmic phrasing chunks representing natural breath pauses.
-   - keyDifficultWords: 4 to 6 of the most phonetically challenging words from this specific passage, with IPA transcription and physical mouth-position tip.
+CAMBRIDGE BAND 8+ SYNTACTIC EXPECTATIONS (for recommended vocabulary only):
+- Cleft sentences: "${CAMBRIDGE_FUNCTIONAL_FRAMES[0].formula}"
+- Fronted adverbials: "${CAMBRIDGE_FUNCTIONAL_FRAMES[1].formula}"
+- Concessive clauses: "${CAMBRIDGE_FUNCTIONAL_FRAMES[2].formula}"
+- Part 3 Speculative frames: "${CAMBRIDGE_FUNCTIONAL_FRAMES[3].formula}"
 
-3. vocalWorkout.speedDrills: Exactly 2 tongue twisters designed to drill motor velocity on "${phoneticSet.drill1.symbol}" and "${phoneticSet.drill2.symbol}".
-   - targetSound: The sound exercised.
-   - twister: An alliterative, fun, original twister sentence.
-   - goalPace: Clear velocity advice (e.g. "Slow articulation -> Natural cadence -> Rapid fire").
-
-4. ieltsExam (SECONDARY APPLICATION):
-   - theme: Cambridge IELTS theme related to "${selectedTheme}".
-   - part1Questions: Exactly 3 authentic Part 1 interview questions.
-   - part2CueCard: Authentic IELTS cue card (title, 3-4 bullets, closing).
-   - part3Questions: Exactly 3 deep analytical discussion questions.`;
+GENERATE A STRUCTURED JSON MATCHING THE SCHEMA:
+- topic: "${selectedTheme}"
+- band: "${band}"
+- hotSeatTest:
+  * theme: "${selectedTheme}"
+  * cambridgeRef: "${cambridgeModule ? `${cambridgeModule.book} • Test ${cambridgeModule.testNumber}` : "Cambridge IELTS Authentic Format"}"
+  * part1Questions: Exactly 3 or 4 authentic, everyday Cambridge Part 1 questions.
+    MANDATORY FORMAT: Every question MUST be a short, single-clause question under 15 words.
+    GOOD EXAMPLES: "Do you work or are you a student?", "What do you enjoy most about your job?", "How often do you use public transport?", "Do you prefer cooking at home or eating out?"
+    BAD (FORBIDDEN): "Given your demanding schedule building X, how do you manage to balance Y with Z?" — NEVER combine topics, NEVER reference specific jobs/fields, NEVER exceed 15 words.
+  * part2CueCard: Authentic Cambridge Task Card (title, 3 bullets, closing sentence).
+  * part3Questions: Exactly 3 or 4 deep analytical Cambridge Part 3 discussion questions requiring comparative, speculative, and societal evaluation.
+  * recommendedVocabulary: Exactly 3 or 4 Band 8.5/9.0 lexical collocations with meaning, realistic example sentence, and phonetic tip.`;
 }
 
 export const lessonSchema = {
   type: "object",
   properties: {
     topic: { type: "string" },
-    vocalWorkout: {
-      type: "object",
-      properties: {
-        motorDrills: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              soundSymbol: { type: "string" },
-              soundName: { type: "string" },
-              physicalTip: { type: "string" },
-              practiceWords: { type: "array", items: { type: "string" } },
-              challengeSentence: { type: "string" },
-            },
-            required: ["soundSymbol", "soundName", "physicalTip", "practiceWords", "challengeSentence"],
-          },
-        },
-        longReading: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            theme: { type: "string" },
-            wordCount: { type: "number" },
-            fullText: { type: "string" },
-            targetWpmRange: { type: "string" },
-            thoughtChunks: { type: "array", items: { type: "string" } },
-            keyDifficultWords: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  word: { type: "string" },
-                  phonetic: { type: "string" },
-                  tip: { type: "string" },
-                },
-                required: ["word", "phonetic", "tip"],
-              },
-            },
-          },
-          required: ["title", "theme", "wordCount", "fullText", "targetWpmRange", "thoughtChunks", "keyDifficultWords"],
-        },
-        speedDrills: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              title: { type: "string" },
-              targetSound: { type: "string" },
-              twister: { type: "string" },
-              goalPace: { type: "string" },
-            },
-            required: ["title", "targetSound", "twister", "goalPace"],
-          },
-        },
-      },
-      required: ["motorDrills", "longReading", "speedDrills"],
-    },
-    ieltsExam: {
+    band: { type: "string", enum: ["5.5", "6.5", "7.5"] },
+    hotSeatTest: {
       type: "object",
       properties: {
         theme: { type: "string" },
+        cambridgeRef: { type: "string" },
         part1Questions: { type: "array", items: { type: "string" } },
         part2CueCard: {
           type: "object",
@@ -188,111 +119,139 @@ export const lessonSchema = {
           required: ["title", "bullets", "closing"],
         },
         part3Questions: { type: "array", items: { type: "string" } },
+        recommendedVocabulary: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              phrase: { type: "string" },
+              meaning: { type: "string" },
+              example: { type: "string" },
+              phoneticTip: { type: "string" },
+            },
+            required: ["phrase", "meaning", "example"],
+          },
+        },
       },
-      required: ["theme", "part1Questions", "part2CueCard", "part3Questions"],
+      required: ["theme", "part1Questions", "part2CueCard", "part3Questions", "recommendedVocabulary"],
     },
   },
-  required: ["topic", "vocalWorkout", "ieltsExam"],
+  required: ["topic", "hotSeatTest"],
 };
 
 export const STAGE_CUES: Record<Stage, string> = {
-  motor_warmup: "[CUE] motor_warmup",
-  long_reading: "[CUE] long_reading",
-  speed_drill: "[CUE] speed_drill",
-  ielts_test: "[CUE] ielts_test",
+  part1: "[CUE] start_part1_interview",
+  part2: "[CUE] start_part2_cuecard",
+  part3: "[CUE] start_part3_discussion",
 };
 
-export function examinerInstruction(lesson: Lesson): string {
-  const motor = lesson.vocalWorkout.motorDrills;
-  const reading = lesson.vocalWorkout.longReading;
-  const speed = lesson.vocalWorkout.speedDrills;
-  const exam = lesson.ieltsExam;
+export function examinerInstruction(lesson: Lesson, profile?: Pick<CandidateProfile, "preferredName" | "fullName" | "targetBand">): string {
+  const p = { ...DEFAULT_PROFILE, ...profile };
+  const name = p.preferredName || "the candidate";
+  const fullName = p.fullName || p.preferredName || "not given";
+  const exam = lesson.hotSeatTest;
 
-  return `You are an elite British Vocal Coach, Speech Therapist, and Senior Cambridge IELTS Examiner.
-Your voice is warm, articulative, encouraging, and authoritative with a crisp Received Pronunciation (RP) British accent.
+  return `You are Dr. Jonathan Vance, a friendly, experienced British IELTS Speaking examiner.
+Your voice is warm, crisp, authoritative, received pronunciation (RP) British English.
+You are conducting a Cambridge-style IELTS Speaking practice test for ${name} (${fullName}), targeting Band ${p.targetBand}.
 
-CORE PHILOSOPHY:
-- Speaking freeze is caused by physical vocal muscle tightness and breath anxiety, NOT lack of vocabulary.
-- Your primary duty is vocal gymnastics, jaw relaxation, breath phrasing, and extended reading stamina.
-- The IELTS exam is an optional secondary application.
+CANDIDATE:
+- Preferred name: "${name}" (Full: ${fullName})
+- Target Band: ${p.targetBand}
 
-CURRICULUM IN THIS SESSION:
-Theme: "${lesson.topic}"
+EXAMINER VERBATIM PROTOCOL:
+- In real IELTS examinations, the examiner does NOT know the candidate's occupation, background, or personal routine prior to the test.
+- You must read each question from the EXAM BLUEPRINT below VERBATIM.
+- Do NOT improvise, modify, rephrase, or personalize any question. Speak the exact question text.
 
-1. MOTOR DRILLS:
-${motor
-  .map(
-    (m, i) =>
-      `  Drill ${i + 1}: ${m.soundSymbol} (${m.soundName}) - Cue: "${m.physicalTip}" | Words: ${m.practiceWords.join(", ")} | Sentence: "${m.challengeSentence}"`
-  )
-  .join("\n")}
+EXAM BLUEPRINT:
+- Exam Reference: ${exam.cambridgeRef || "Cambridge IELTS Speaking Standard"}
+- Theme: "${exam.theme || lesson.topic}"
+- Part 1 Questions:
+${exam.part1Questions.map((q, i) => `  ${i + 1}. "${q}"`).join("\n")}
+- Part 2 Cue Card:
+  Title: "${exam.part2CueCard.title}"
+  Bullets:
+${exam.part2CueCard.bullets.map((b) => `  • ${b}`).join("\n")}
+  Closing: "${exam.part2CueCard.closing}"
+- Part 3 Analytical Discussion Prompts:
+${exam.part3Questions.map((q, i) => `  ${i + 1}. "${q}"`).join("\n")}
 
-2. LONG READING GYM (CORE VOCAL STAMINA):
-  Title: "${reading.title}" (${reading.wordCount} words)
-  Pacing Target: ${reading.targetWpmRange}
-  Key Difficult Words: ${reading.keyDifficultWords.map((w) => `${w.word} (${w.phonetic})`).join(", ")}
-  Passage:
-  "${reading.fullText}"
+STRICT CAMBRIDGE EXAMINER BOUNDS (DO NOT DEVIATE):
+- You are strictly an official British Cambridge IELTS Examiner following standard exam specifications.
+- In real IELTS tests, examiners ask direct, accessible, clean questions.
+- Stick strictly to the Official Exam Blueprint questions below. Deliver each question clearly and verbatim.
+- The candidate will demonstrate their high-level Band 8.5/9.0 vocabulary and syntactic structures in their responses. Your questions remain standard, neutral, and direct.
 
-3. SPEED & VELOCITY DRILLS:
-${speed.map((s, i) => `  Drill ${i + 1}: [${s.targetSound}] "${s.twister}" (${s.goalPace})`).join("\n")}
+AUTHENTIC TURN-TAKING & SPOKEN QUESTION PROTOCOL:
+1. Address the candidate as "${name}".
+2. Speak with natural Received Pronunciation (crisp consonants, melodic pitch range).
+3. SEQUENTIAL INQUIRY DELIVERY & VOICE PACING:
+   - In Part 1 and Part 3, you MUST ask the official questions sequentially: Question 1 -> Question 2 -> Question 3 -> Question 4.
+   - When presenting each question, clearly enunciate the key question phrase so the candidate's visual interface can follow your voice seamlessly.
+   - You may use natural transitional phrasing:
+     * Question 1: "To begin with our first question: [Question 1 text]?"
+     * Question 2: "Thank you. Moving to our second question: [Question 2 text]?"
+     * Question 3: "Now turning to our third inquiry: [Question 3 text]?"
+     * Question 4: "And for our final question in this part: [Question 4 text]?"
+4. SPOKEN STAGE TRANSITION MARKERS:
+   - When the candidate finishes responding to the final Part 1 question, clearly announce:
+     "Thank you very much. That concludes Part 1. We will now move on to Part 2."
+   - In Part 2 (Cue Card Monologue):
+     Formally present the Cue Card: "Now, I am going to give you a topic, and I'd like you to talk about it for one to two minutes..."
+     STAY COMPLETELY SILENT while the candidate delivers their 1-2 minute monologue. DO NOT interrupt.
+     When the candidate concludes their monologue, announce:
+     "Thank you. That brings us to Part 3 discussion."
+   - In Part 3 (Analytical Inquiries):
+     Move sequentially through each Part 3 question.
+     When the candidate finishes responding to the final Part 3 question, conclude:
+     "Thank you very much. That concludes the Cambridge IELTS Speaking test."
 
-4. IELTS EXAM (OPTIONAL CAPSTONE):
-  Part 1 Questions: ${exam.part1Questions.join(" | ")}
-  Part 2 Cue Card: "${exam.part2CueCard.title}"
-  Part 3 Questions: ${exam.part3Questions.join(" | ")}
+STAGE TRANSITIONS (WHEN YOU RECEIVE STAGE CUES):
+- When you receive "[CUE] start_part1_interview":
+  Greet ${name} warmly: "Good day, my name is Dr. Jonathan Vance. Welcome to your Cambridge IELTS Speaking session. Could you tell me your full name, please?... Thank you. And what shall I call you?... Splendid. In this first part, I'd like to ask you some questions about yourself."
+  Ask Question 1 from Part 1, listen to their full response, and proceed through Part 1 questions naturally. Keep initial greeting concise (under 25 seconds).
 
-BEHAVIORAL INSTRUCTIONS BY CUE:
-- When you receive "[CUE] motor_warmup":
-  Greet the student warmly. Explain that before speaking spontaneously, we must wake up the jaw, tongue tip, and vocal cords. Guide them through the first sound: explain the mouth position tip concisely, model 2 practice words, and ask them to repeat. Keep each turn under 25 seconds.
-- When you receive "[CUE] long_reading":
-  Introduce the core stamina exercise. Instruct the student to read the entire passage aloud at a steady, controlled pace (${reading.targetWpmRange}). Remind them to breathe at commas and clause boundaries without holding their breath. Once they finish reading, give immediate feedback on rhythm, continuous vocal projection, and consonant crispness.
-- When you receive "[CUE] speed_drill":
-  Challenge them to test their vocal motor speed with the tongue twisters. Ask them to do 1 slow articulation rep, then 1 natural rep, then 1 rapid-fire rep.
-- When you receive "[CUE] ielts_test":
-  Adopt a formal, supportive Cambridge examiner persona and conduct Part 1, Part 2, or Part 3 based on the candidate's preference.
+- When you receive "[CUE] start_part2_cuecard":
+  Transition formally to Part 2: "Now, I'm going to give you a topic, and I'd like you to talk about it for one to two minutes. Before you talk, you'll have one minute to think about what you're going to say. Here is your topic: [Read the Cue Card Title: '${exam.part2CueCard.title}']."
+  Prompt the bullets, tell them to begin when ready, and stay completely silent while they deliver their speech.
 
-GENERAL CONVERSATION RULES:
-- Keep turns concise (15-30 seconds max). NEVER monologue.
-- Praise physical clarity ("Crisp release on that /t/ sound!").
-- Model pronunciation clearly with natural British cadence.`;
+- When you receive "[CUE] start_part3_discussion":
+  Transition seamlessly to Part 3: "We've been talking about this topic, and I'd now like to ask you some broader, more analytical questions related to this."
+  Present the first Part 3 analytical inquiry. Challenge them politely to speculate, compare past trends with future directions, and justify their viewpoints.`;
 }
 
 export function feedbackPrompt(lesson: Lesson, transcript: TranscriptEntry[], band: string): string {
   const studentTurns = transcript.filter((t) => t.role === "student" && t.text.trim().length > 0);
   const studentText = studentTurns.map((t) => `[${t.stage.toUpperCase()}] CANDIDATE: ${t.text}`).join("\n");
   const fullTranscript = transcript.map((t) => `[${t.stage.toUpperCase()}] ${t.role.toUpperCase()}: ${t.text}`).join("\n");
+  const exam = lesson.hotSeatTest;
 
-  return `You are a Senior Vocal Coach and Cambridge IELTS Examiner.
-Your duty is to objectively evaluate ONLY the candidate's actual spoken output.
+  return `You are an experienced IELTS Speaking examiner.
+Your duty is to evaluate ONLY the candidate's actual spoken output from this Authentic Cambridge Hot Seat.
 
 Target Band: ${band}.
-Passage word count: ${lesson.vocalWorkout.longReading.wordCount}.
+Exam: ${exam?.cambridgeRef || "Cambridge-style practice test"}.
 
-CANDIDATE ACTUAL SPOKEN WORDS (${studentTurns.length} turns recorded):
-${studentText || "(NO CANDIDATE WORDS RECORDED - CANDIDATE DID NOT SPEAK)"}
+CANDIDATE ACTUAL RECORDED WORDS (${studentTurns.length} turns recorded):
+${studentText || "(NO CANDIDATE WORDS DETECTED - CANDIDATE WAS SILENT)"}
 
-FULL SESSION CONTEXT:
+FULL TRANSCRIPT LOG:
 ${fullTranscript}
 
-STRICT SCORING RULES:
-- Grade ONLY words the candidate actually articulated in the CANDIDATE ACTUAL SPOKEN WORDS section.
-- NEVER invent, hallucinate, or award high scores if the candidate spoke very few words or was silent.
-- If the candidate barely spoke, point that out clearly in the diagnostic feedback.
+SCORING RULES:
+- Grade against the public IELTS Speaking band descriptors (Fluency & Coherence, Lexical Resource, Grammatical Range & Accuracy, Pronunciation).
+- You only have a TEXT transcript, not audio. Never describe sounds, accent, intonation, jaw, lips, breathing or voice quality.
+- Pronunciation: give a cautious ESTIMATE from indirect text evidence only (e.g. transcription errors that suggest unclear words, self-corrections). Say in the comment that it is an estimate from the transcript and that audio-based accent feedback is available in the shadowing practice.
+- NEVER inflate scores if the candidate was silent or spoke very few words.
 
-Provide structured diagnostic JSON:
-- overall: band score (0 to 9 in 0.5 steps)
-- fluency, lexical, grammar, pronunciation: band + 1-2 sentence diagnostic comment
-- vocalHabits:
-  * readingStamina: specific feedback on reading endurance, vocal projection, or fatigue across long text
-  * speakingWpm: evaluation of speaking cadence and rate
-  * jawTension: specific observation on jaw/mouth tightness
-  * breathPacing: observation on breathing pauses at commas and clauses
-  * soundClarity: comment on consonant cluster articulation and clarity
-- strengths: 2-3 specific vocal/spoken strengths observed
-- improvements: 2-3 specific growth priorities for tongue/mouth motor stamina
-- wordsToPractice: 3-5 words from the transcript that had articulation flaws, with a concrete physical tongue-position tip
-- nextDrill: one specific 5-minute vocal muscle routine for tomorrow.`;
+Return JSON matching feedbackSchema:
+- overall: band score (0 to 9 in 0.5 increments)
+- fluency, lexical, grammar, pronunciation: band score + 1-2 sentence comment grounded in the transcript
+- strengths: 2-3 specific strengths, quoting the candidate where possible
+- improvements: 2-3 highest-priority improvements
+- wordsToPractice: 3-5 words or phrases from their answers worth practising, each with a short pronunciation tip
+- nextDrill: one specific 5-minute shadowing exercise for tomorrow.`;
 }
 
 const criterion = {
@@ -309,17 +268,6 @@ export const feedbackSchema = {
     lexical: criterion,
     grammar: criterion,
     pronunciation: criterion,
-    vocalHabits: {
-      type: "object",
-      properties: {
-        readingStamina: { type: "string" },
-        speakingWpm: { type: "string" },
-        jawTension: { type: "string" },
-        breathPacing: { type: "string" },
-        soundClarity: { type: "string" },
-      },
-      required: ["readingStamina", "speakingWpm", "jawTension", "breathPacing", "soundClarity"],
-    },
     strengths: { type: "array", items: { type: "string" } },
     improvements: { type: "array", items: { type: "string" } },
     wordsToPractice: {
@@ -333,7 +281,14 @@ export const feedbackSchema = {
     nextDrill: { type: "string" },
   },
   required: [
-    "overall", "fluency", "lexical", "grammar", "pronunciation", "vocalHabits",
-    "strengths", "improvements", "wordsToPractice", "nextDrill",
+    "overall",
+    "fluency",
+    "lexical",
+    "grammar",
+    "pronunciation",
+    "strengths",
+    "improvements",
+    "wordsToPractice",
+    "nextDrill",
   ],
 };

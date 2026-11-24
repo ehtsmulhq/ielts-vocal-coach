@@ -1,70 +1,110 @@
 export type TargetBand = "5.5" | "6.5" | "7.5";
 
-export type Stage = "motor_warmup" | "long_reading" | "speed_drill" | "ielts_test";
+export type Stage = "part1" | "part2" | "part3";
 
 export const STAGES: {
   id: Stage;
   label: string;
   hint: string;
-  category: "vocal" | "exam";
+  category: "exam";
   badge: string;
 }[] = [
-  { id: "motor_warmup", label: "Motor Drills", hint: "Jaw & Lip Articulation", category: "vocal", badge: "Stage 1" },
-  { id: "long_reading", label: "Long Reading Gym", hint: "Stamina, WPM & Pacing", category: "vocal", badge: "Stage 2 • Core" },
-  { id: "speed_drill", label: "Speed & Reflexes", hint: "Tongue Twisters & Velocity", category: "vocal", badge: "Stage 3" },
-  { id: "ielts_test", label: "Exam Capstone", hint: "Optional IELTS Speaking Test", category: "exam", badge: "Secondary" },
+  {
+    id: "part1",
+    label: "Part 1: Identity & Everyday Life",
+    hint: "Authentic Interview (Work, Roots, Habits)",
+    category: "exam",
+    badge: "Part 1 • 4-5 min",
+  },
+  {
+    id: "part2",
+    label: "Part 2: Individual Long Turn",
+    hint: "Official Cue Card Monologue (1-2 min)",
+    category: "exam",
+    badge: "Part 2 • 3-4 min",
+  },
+  {
+    id: "part3",
+    label: "Part 3: Two-Way Discussion",
+    hint: "Deep Analytical & Abstract Exchange",
+    category: "exam",
+    badge: "Part 3 • 4-5 min",
+  },
 ];
 
-export interface MotorDrill {
-  soundSymbol: string;
-  soundName: string;
-  physicalTip: string;
-  practiceWords: string[];
-  challengeSentence: string;
+export interface CandidateProfile {
+  fullName: string;
+  preferredName: string;
+  status: "working" | "studying" | "both" | "transitioning";
+  occupationOrMajor: string;
+  fieldDetails: string;
+  hometownName: string;
+  hometownVibe: string;
+  currentResidence: string;
+  livingSetup: "apartment" | "house" | "shared_flat" | "dormitory";
+  favoriteRoom: string;
+  morningRoutine: string;
+  unwindingHabit: string;
+  targetBand: TargetBand;
+  examPurpose: string;
+  hasCompletedGrill?: boolean;
+  lastUpdated?: number;
 }
 
-export interface LongReadingPassage {
+/** An empty profile: nothing about the learner is assumed until they tell us. */
+export const DEFAULT_PROFILE: CandidateProfile = {
+  fullName: "",
+  preferredName: "",
+  status: "working",
+  occupationOrMajor: "",
+  fieldDetails: "",
+  hometownName: "",
+  hometownVibe: "",
+  currentResidence: "",
+  livingSetup: "apartment",
+  favoriteRoom: "",
+  morningRoutine: "",
+  unwindingHabit: "",
+  targetBand: "7.5",
+  examPurpose: "",
+  hasCompletedGrill: false,
+}
+
+export interface CueCard {
   title: string;
-  theme: string;
-  wordCount: number;
-  fullText: string;
-  targetWpmRange: string; // e.g. "120 - 140 WPM"
-  thoughtChunks: string[];
-  keyDifficultWords: { word: string; phonetic: string; tip: string }[];
+  bullets: string[];
+  closing: string;
 }
 
-export interface SpeedDrill {
-  title: string;
-  targetSound: string;
-  twister: string;
-  goalPace: string;
+export interface RecommendedCollocation {
+  phrase: string;
+  meaning: string;
+  example: string;
+  phoneticTip?: string;
 }
 
-export interface IeltsExam {
+export interface CambridgeHotSeatTest {
   theme: string;
+  cambridgeRef?: string;
   part1Questions: string[];
-  part2CueCard: {
-    title: string;
-    bullets: string[];
-    closing: string;
-  };
+  part2CueCard: CueCard;
   part3Questions: string[];
+  recommendedVocabulary: RecommendedCollocation[];
+  bandFocusNotes?: string;
 }
 
 export interface Lesson {
   topic: string;
-  vocalWorkout: {
-    motorDrills: MotorDrill[];
-    longReading: LongReadingPassage;
-    speedDrills: SpeedDrill[];
-  };
-  ieltsExam: IeltsExam;
+  band: TargetBand;
+  hotSeatTest: CambridgeHotSeatTest;
 }
 
 export interface LessonRequest {
   band: TargetBand;
   topic?: string;
-  focusArea?: "full" | "consonants" | "reading" | "speed";
+  profile?: CandidateProfile;
+  cambridgeTestId?: string;
+  sceneId?: string;
 }
 
 export interface TranscriptEntry {
@@ -85,7 +125,8 @@ export interface Feedback {
   lexical: CriterionScore;
   grammar: CriterionScore;
   pronunciation: CriterionScore;
-  vocalHabits: {
+  /** Legacy: older reports contain these; they are no longer generated or shown. */
+  vocalHabits?: {
     readingStamina: string;
     speakingWpm: string;
     jawTension: string;

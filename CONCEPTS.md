@@ -1,58 +1,39 @@
-# IELTS Vocal Coach — Core Concepts
+# Concepts
 
-## 1. The problem we are solving
-Many learners can **think** and **write** in English but freeze when **speaking**. The bottleneck is not knowledge — it is
-*motor skill*. The mouth, jaw and tongue have not rehearsed English sound patterns enough, and the brain has never had to
-produce English in real time under mild pressure. The fix is **volume of spoken output**, not more reading.
+## Why shadowing
 
-## 2. Learning principles baked into the app
+Many learners can read and write English well but sound unnatural or freeze when speaking. The bottleneck is usually not knowledge but **motor skill**: the mouth, jaw and tongue haven't rehearsed English sound patterns, rhythm and stress enough. The fix is a large volume of spoken repetition of a good model, not more reading.
+
+Shadowing means copying a fluent speaker immediately after them, phrase by phrase. Done repeatedly on the same material, the model's rhythm, stress and sounds become automatic.
+
+## Principles in the app
+
 | Principle | How the app applies it |
-|---|---|
-| **Speak first, think later** | Every stage requires the student to talk out loud. There is no typing anywhere. |
-| **Warm the muscles before the test** | Each session opens with a read-aloud paragraph packed with tricky sounds, then a *repeat-after-me* drill on the words the student struggled with. |
-| **Shadowing** | The tutor models a word or phrase and the student immediately repeats it, copying rhythm and stress. |
-| **Low interruption, delayed correction** | During answers the tutor stays quiet. Corrections come *after* a stage, so fluency is never broken mid-sentence. |
-| **Real exam pressure** | Parts 1–3 follow the official IELTS format, including a 1-minute prep / 2-minute talk timer for Part 2. |
-| **Fresh content every time** | A lesson generator writes a new paragraph, questions and cue card per session, so the student can't memorise answers. |
-| **Measurable progress** | A separate scoring model grades the transcript against the 4 public IELTS criteria. |
+| :--- | :--- |
+| Listen before speaking | Every script starts with the model voice, stressed words marked |
+| Small chunks | Shadowing goes one breath group at a time, with an immediate turn to repeat |
+| Same script, many times | Reps, best scores and before/after comparisons reward repetition, not novelty |
+| Your own story | Capture turns the learner's real answers into scripts, so practice transfers to real conversations |
+| One thing at a time | Each take gets a single focus tip; Progress highlights the weakest accent area |
+| Honest measurement | Scores are labelled as AI judgement; text-only grading never claims to hear pronunciation |
 
-## 3. Session flow
-```
-Setup (target band, optional topic)
-  → Lesson generated  (text model)
-  → Warm-up: read paragraph aloud → feedback → repeat-after-me drill
-  → Part 1: 3 short interview questions
-  → Part 2: cue card, 1 min prep, up to 2 min talk
-  → Part 3: 3 abstract discussion questions
-  → Feedback report (text model grades the transcript)
-```
-The student moves between stages with a **Next** button. The app then sends a hidden `[CUE]` message telling the tutor to
-start the next stage, so the UI and the tutor always stay in sync.
+## Gemini Live API notes
 
-## 4. Multi-model architecture (free tier friendly)
-| Job | Model | Why |
-|---|---|---|
-| Generate lesson (JSON) | `gemini-3.5-flash-lite` (fallbacks: `gemini-2.5-flash-lite`, `gemini-2.5-flash`) | Fast, cheap, 500 requests/day on the free tier |
-| Live voice examiner | `gemini-3.8-live` | Real-time two-way audio with an unlimited daily quota |
-| Score the transcript | `gemini-3.5-flash-lite` (same fallbacks) | Structured JSON grading, 1 call per session |
+These rules were learned the hard way while building the live interview (`src/lib/live-session.ts`):
 
-You can change all model IDs in `src/lib/models.ts` or through env vars.
+- Live models accept only `responseModalities: ["AUDIO"]`; text comes back through `outputAudioTranscription`. Asking for `["AUDIO","TEXT"]` closes the socket with code 1007.
+- Server frames arrive as binary: set `ws.binaryType = "arraybuffer"` and decode before `JSON.parse`.
+- Wait for `setupComplete` before streaming microphone audio.
+- Microphone audio goes in as 16 kHz 16-bit mono PCM; examiner audio comes back as 24 kHz PCM.
+- On `serverContent.interrupted`, stop queued playback straight away so the learner can barge in.
+- Tokens from `/api/token` are single-use and locked (`liveConnectConstraints` + `lockAdditionalFields: []`) to the model, voice and examiner prompt built on the server.
 
-```
-Browser ──POST /api/lesson──▶ Next.js server ──▶ flash-lite   (lesson JSON)
-Browser ──POST /api/token───▶ Next.js server ──▶ Gemini auth  (1-use ephemeral token)
-Browser ══WebSocket (token)═══════════════════▶ gemini-3.8-live (mic audio ⇄ tutor audio + transcripts)
-Browser ──POST /api/feedback▶ Next.js server ──▶ flash-lite   (band scores JSON)
-```
+## Model choices
 
-## 5. Security
-The real `GEMINI_API_KEY` is only stored on the server in `.env.local`. The browser gets a short-lived, single-use
-**ephemeral token** for the live session, so the key is never sent to the browser.
+| Job | Configured by | Default |
+| :--- | :--- | :--- |
+| Model voice (shadowing) | `TTS_MODELS` | `gemini-3.8-flash-tts` first |
+| Accent coaching, grading, scripts | `TEXT_MODELS` | `gemini-3.5-flash-lite` first |
+| Live examiner | `LIVE_MODEL` / Settings at capture time | `gemini-3.1-flash-live-preview` |
 
-## 6. Live API rules we learned the hard way
-- `gemini-3.8-live` accepts **only** `responseModalities: ["AUDIO"]`. Asking for `["AUDIO","TEXT"]` makes the server
-  close the socket with code **1007**. Text comes back through `outputAudioTranscription`.
-- Server frames come in as **binary**, so set `ws.binaryType = "arraybuffer"` and decode them before `JSON.parse`.
-- Wait for `setupComplete` before streaming mic audio.
-- Mic audio goes in as 16 kHz 16-bit mono PCM. Tutor audio comes back as 24 kHz PCM.
-- On `serverContent.interrupted`, stop queued playback straight away so the student can barge in.
+All lists are tried in order, so a rate-limited or retired model falls through to the next.
