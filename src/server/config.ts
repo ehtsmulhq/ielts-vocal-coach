@@ -35,6 +35,14 @@ export const LIVE_MODEL = process.env.LIVE_MODEL?.trim() || DEFAULT_LIVE_MODEL;
 /** The operator's LIVE_MODEL override is allowed alongside the built-in catalogue. */
 const LIVE_MODEL_IDS = new Set<string>([...LIVE_MODELS.map((m) => m.id), LIVE_MODEL]);
 
+/**
+ * How model clips are voiced: "live" (default) reads them with the tutor's Live
+ * voice, checking the reading is verbatim and falling back to TTS; "tts" uses
+ * the TTS models only.
+ */
+export const MODEL_AUDIO_ENGINE: "live" | "tts" = process.env.MODEL_AUDIO_ENGINE?.trim() === "tts" ? "tts" : "live";
+export const LIVE_RENDER_MODEL = process.env.LIVE_RENDER_MODEL?.trim() || LIVE_MODEL;
+
 /** Extra origins allowed to call the API (comma-separated), e.g. a staging domain. */
 export const ALLOWED_ORIGINS = list(process.env.ALLOWED_ORIGINS, "");
 

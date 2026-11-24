@@ -6,7 +6,9 @@
 
 Shadowing is how people absorb an accent: you copy the rhythm, stress and sounds of a fluent voice, again and again, until your mouth does it without thinking. This app is a gym for that.
 
-1. **Listen**: hear a British RP model (Gemini TTS) read a script, with stressed words marked.
+Your **coach** (Olivia, James, Amelia or Harry, chosen in the welcome or Settings) is a Gemini Live voice. They greet you on Today, read every script you shadow, and can run a two-way voice lesson on any script: guiding each step, explaining your results out loud, and answering your questions.
+
+1. **Listen**: hear your coach read the script in a British RP accent, with stressed words marked.
 2. **Shadow**: the model speaks one breath group at a time and you repeat it straight away. Each repeat is kept in memory so you can play it back against the model.
 3. **Deliver**: say the whole answer. Gemini listens to the **model clip and your take together** and scores your accent (sounds, stress, rhythm, intonation), with one thing to fix on the next rep and a before/after against your last take.
 
@@ -34,8 +36,10 @@ Open http://localhost:3000 in a normal browser window, allow the microphone, and
 | Variable | Purpose | Default |
 | :--- | :--- | :--- |
 | `GEMINI_API_KEY` | Required, server-side only | none |
-| `TTS_MODELS` | Model-voice models, tried in order | `gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-3.8-flash-lite-tts` |
-| `TTS_VOICE` | Default prebuilt voice for the model clip (learners can change it in Settings) | `Puck` |
+| `MODEL_AUDIO_ENGINE` | `live`: model clips read by the coach's Live voice (checked word for word, TTS fallback); `tts`: TTS only | `live` |
+| `LIVE_RENDER_MODEL` | Live model that reads model clips | `LIVE_MODEL` |
+| `TTS_MODELS` | Fallback TTS models, tried in order | `gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-3.8-flash-lite-tts` |
+| `TTS_VOICE` | Voice used when no coach voice is sent | `Puck` |
 | `LIVE_MODEL`, `LIVE_VOICE` | Live examiner model and voice | see `.env.example` |
 | `TEXT_MODELS` | Coaching, grading and script models, tried in order | see `.env.example` |
 | `ALLOWED_ORIGINS` | Extra origins allowed to call the API | none (same-origin only) |

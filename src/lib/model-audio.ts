@@ -92,6 +92,21 @@ export async function getModelAudio(text: string, voice?: string): Promise<Blob>
   return job;
 }
 
+/**
+ * Renders clips ahead of time, one at a time, so the first Play is instant.
+ * Failures are ignored: playing will simply try again.
+ */
+export async function prefetchModelAudio(texts: string[], voice: string | undefined, isCancelled: () => boolean): Promise<void> {
+  for (const text of texts) {
+    if (isCancelled()) return;
+    try {
+      await getModelAudio(text, voice);
+    } catch {
+      return; // stop prefetching on the first failure (offline, rate limited)
+    }
+  }
+}
+
 export async function blobToBase64(blob: Blob): Promise<string> {
   const buf = new Uint8Array(await blob.arrayBuffer());
   let bin = "";

@@ -8,6 +8,9 @@ import { updatePreferences } from "@/storage/preferences";
 import { saveProfile } from "@/lib/profile";
 import type { CandidateProfile } from "@/lib/types";
 import type { ScriptItem } from "@/domain/contracts";
+import { CoachPicker, coachIntro } from "@/features/tutor/CoachPicker";
+import { useModelPlayer } from "@/features/practice/useModelPlayer";
+import { DEFAULT_TUTOR_ID } from "@/lib/tutors";
 
 const STEPS = [
   { Icon: Headphones, title: "Listen", body: "Hear a British RP model read a short answer." },
@@ -26,11 +29,15 @@ export function WelcomeCard({ profile, firstScript }: { profile: CandidateProfil
   const router = useRouter();
   const [rate, setRate] = useState(0.85);
   const [name, setName] = useState("");
+  const [tutorId, setTutorId] = useState(DEFAULT_TUTOR_ID);
+  const [previewing, setPreviewing] = useState<string | null>(null);
+  const player = useModelPlayer();
 
   const start = (e: FormEvent) => {
     e.preventDefault();
     if (name.trim()) saveProfile({ ...profile, preferredName: name.trim(), fullName: profile.hasCompletedGrill ? profile.fullName : name.trim() });
-    updatePreferences({ onboarded: true, modelRate: rate });
+    player.stop();
+    updatePreferences({ onboarded: true, modelRate: rate, tutorId });
     if (firstScript) router.push(`/practice/${firstScript.id}`);
   };
 
@@ -63,6 +70,26 @@ export function WelcomeCard({ profile, firstScript }: { profile: CandidateProfil
           <SectionLabel>Accent</SectionLabel>
           <p className="text-sm">British (Received Pronunciation)</p>
         </div>
+
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">Choose your coach</legend>
+          <CoachPicker
+            value={tutorId}
+            onChange={setTutorId}
+            previewingId={previewing}
+            onPreview={(t) => {
+              if (previewing === t.id) {
+                player.stop();
+                setPreviewing(null);
+                return;
+              }
+              setTutorId(t.id);
+              updatePreferences({ tutorId: t.id });
+              setPreviewing(t.id);
+              void player.playModel(coachIntro(t), 1).finally(() => setPreviewing((p) => (p === t.id ? null : p)));
+            }}
+          />
+        </fieldset>
 
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Start at which pace?</legend>

@@ -141,10 +141,11 @@ export async function guardJson<S extends z.ZodType>(
 /** Shared presets so limits are tuned in one place. */
 export const LIMITS = {
   coach: { maxBytes: 16 * 1024 * 1024, rateLimit: { max: 20, windowMs: 60_000 } },
-  modelAudio: { maxBytes: 32 * 1024, rateLimit: { max: 30, windowMs: 60_000 } },
+  modelAudio: { maxBytes: 32 * 1024, rateLimit: { max: 40, windowMs: 60_000 } },
   feedback: { maxBytes: 1024 * 1024, rateLimit: { max: 6, windowMs: 60_000 } },
   upgrade: { maxBytes: 1024 * 1024, rateLimit: { max: 6, windowMs: 60_000 } },
   lesson: { maxBytes: 64 * 1024, rateLimit: { max: 12, windowMs: 60_000 } },
   token: { maxBytes: 8 * 1024, rateLimit: { max: 6, windowMs: 60_000 } },
+  tutor: { maxBytes: 48 * 1024, rateLimit: { max: 6, windowMs: 60_000 } },
   ping: { rateLimit: { max: 60, windowMs: 60_000 } },
 } as const;

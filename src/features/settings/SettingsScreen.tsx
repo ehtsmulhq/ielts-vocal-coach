@@ -2,12 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Play, Trash2, Upload } from "lucide-react";
-import { Alert, Button, Card, SectionLabel, cn } from "@/ui/primitives";
+import { Download, Trash2, Upload } from "lucide-react";
+import { Alert, Button, Card, cn } from "@/ui/primitives";
 import { useHydrated, usePreferences, useProfile } from "@/features/shared/stores";
 import { ProfileForm } from "@/features/profile/ProfileForm";
 import { useModelPlayer } from "@/features/practice/useModelPlayer";
-import { LIVE_VOICES } from "@/lib/models";
+import { CoachPicker, coachIntro } from "@/features/tutor/CoachPicker";
 import { updatePreferences, type ThemePreference } from "@/storage/preferences";
 import { exportUserData, importUserData } from "@/storage/backup";
 import { wipeAllUserData } from "@/storage/wipe";
@@ -18,7 +18,6 @@ const THEMES: { id: ThemePreference; label: string }[] = [
   { id: "light", label: "Light" },
   { id: "dark", label: "Dark" },
 ];
-const PREVIEW_LINE = "What I enjoy most is the chance to practise a little every day.";
 
 function Choice<T extends string | number>({
   name,
@@ -141,6 +140,7 @@ export function SettingsScreen() {
   const prefs = usePreferences();
   const player = useModelPlayer();
   const [profileSaved, setProfileSaved] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
   if (!hydrated) return <Card className="h-64 animate-pulse bg-surface-2" aria-busy="true" aria-label="Loading" />;
 
@@ -151,34 +151,28 @@ export function SettingsScreen() {
       </header>
 
       <Card className="space-y-5">
-        <h2 className="text-lg font-semibold">Model voice</h2>
-        <div className="space-y-2">
-          <SectionLabel>Accent</SectionLabel>
-          <p className="text-sm">British (Received Pronunciation)</p>
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Your coach</h2>
+          <p className="text-sm text-muted">
+            Your coach teaches you in lessons and reads every script you shadow, all in a British (Received
+            Pronunciation) accent.
+          </p>
         </div>
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">Voice</span>
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={prefs.modelVoice}
-              onChange={(e) => updatePreferences({ modelVoice: e.target.value })}
-              className="h-10 min-w-[14rem] rounded-[var(--radius-control)] border border-line bg-surface px-3 text-sm"
-            >
-              {LIVE_VOICES.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name} · {v.desc}
-                </option>
-              ))}
-            </select>
-            <Button
-              onClick={() => (player.isPlaying || player.isLoading ? player.stop() : void player.playModel(PREVIEW_LINE, prefs.modelRate))}
-            >
-              <Play className="h-4 w-4" aria-hidden />
-              {player.isLoading ? "Loading…" : player.isPlaying ? "Stop" : "Preview"}
-            </Button>
-          </div>
-          <span className="block text-xs text-subtle">Changing the voice re-creates model audio the next time you play a script.</span>
-        </label>
+        <CoachPicker
+          value={prefs.tutorId}
+          onChange={(tutorId) => updatePreferences({ tutorId })}
+          previewingId={preview}
+          onPreview={(t) => {
+            if (preview === t.id) {
+              player.stop();
+              setPreview(null);
+              return;
+            }
+            updatePreferences({ tutorId: t.id });
+            setPreview(t.id);
+            void player.playModel(coachIntro(t), 1).finally(() => setPreview((p) => (p === t.id ? null : p)));
+          }}
+        />
         <div className="space-y-2">
           <span className="text-sm font-medium">Default speed</span>
           <Choice

@@ -5,11 +5,18 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ScriptItem } from "@/domain/contracts";
 import { Alert, ButtonLink, Card, cn, SectionLabel } from "@/ui/primitives";
-import { useHydrated, usePreferences, useScriptVault, useHasCaptured } from "@/features/shared/stores";
+import { useAttempts, useHydrated, usePreferences, useProfile, useScriptVault, useHasCaptured } from "@/features/shared/stores";
 import { buildPacks, findScript, neighbours, type ScriptLocation } from "@/features/library/catalog";
 import { updatePreferences } from "@/storage/preferences";
 import { cleanChunks } from "./audio";
-import { useModelPlayer } from "./useModelPlayer";
+import { useModelPlayer, type ModelPlayer } from "./useModelPlayer";
+import { prefetchModelAudio } from "@/lib/model-audio";
+import { getTutor } from "@/lib/tutors";
+import { attemptsFor, headlineScore } from "@/domain/attempt";
+import { recentAreaAverages, weakestArea } from "@/domain/progress";
+import { useTutor } from "@/features/tutor/useTutor";
+import { TutorPanel } from "@/features/tutor/TutorPanel";
+import type { CoachResult } from "./useCoach";
 import { useShadowLoop } from "./useShadowLoop";
 import { useRecorder } from "./useRecorder";
 import { useCoach } from "./useCoach";
@@ -20,6 +27,31 @@ import { ResultPanel } from "./components/ResultPanel";
 import { CollocationList } from "./components/CollocationList";
 
 type Phase = "listen" | "shadow" | "deliver" | "result";
+
+/** A compact, factual summary the coach turns into spoken feedback. */
+function resultForTutor({ analysis, attempt, previous }: CoachResult) {
+  return {
+    score: Math.round(attempt ? headlineScore(attempt) : (analysis.accent?.overall ?? analysis.accuracyScore)),
+    previousScore: previous ? Math.round(headlineScore(previous)) : null,
+    accent: analysis.accent
+      ? {
+          sounds: Math.round(analysis.accent.sounds),
+          stress: Math.round(analysis.accent.stress),
+          rhythm: Math.round(analysis.accent.rhythm),
+          intonation: Math.round(analysis.accent.intonation),
+          focusTip: analysis.accent.focusTip,
+        }
+      : null,
+    wordsCorrectPercent: Math.round(analysis.accuracyScore),
+    paceWpm: Math.round(analysis.actualWpm),
+    topMistakes: analysis.mistakes.slice(0, 2).map((m) => ({
+      type: m.type,
+      said: m.userSaid,
+      target: m.targetPhrase,
+      tip: m.phoneticTip ?? m.coachCorrection,
+    })),
+  };
+}
 const PHASES: { id: Phase; label: string }[] = [
   { id: "listen", label: "1. Listen" },
   { id: "shadow", label: "2. Shadow" },
@@ -64,16 +96,87 @@ function PracticeSession({
 }) {
   const script: ScriptItem = loc.script;
   const { prev, next } = neighbours(loc);
-  const { modelRate } = usePreferences();
+  const { modelRate, tutorId, modelVoice } = usePreferences();
+  const profile = useProfile();
+  const attempts = useAttempts();
+  const persona = getTutor(tutorId);
+  const tutorContext = useMemo(() => {
+    const mine = attemptsFor(attempts, script.id);
+    const last = mine[mine.length - 1];
+    return {
+      focusArea: weakestArea(recentAreaAverages(attempts)) ?? undefined,
+      lastScore: last ? Math.round(headlineScore(last)) : undefined,
+      reps: mine.length,
+    };
+  }, [attempts, script.id]);
+  const tutor = useTutor({ script, learnerName: profile.preferredName, tutorId: persona.id, context: tutorContext });
 
   const [phase, setPhase] = useState<Phase>("listen");
   const [takeUrl, setTakeUrl] = useState<string | null>(null);
   const takeUrlRef = useRef<string | null>(null);
 
-  const player = useModelPlayer();
+  const rawPlayer = useModelPlayer();
+  // During a lesson the coach pauses (and stops listening) whenever the model plays or the learner records.
+  const player: ModelPlayer = {
+    ...rawPlayer,
+    playModel: async (text, rate) => {
+      tutor.hold();
+      try {
+        return await rawPlayer.playModel(text, rate);
+      } finally {
+        tutor.release();
+      }
+    },
+    playUrl: async (url, rate, revoke) => {
+      tutor.hold();
+      try {
+        await rawPlayer.playUrl(url, rate, revoke);
+      } finally {
+        tutor.release();
+      }
+    },
+  };
   const chunks = useMemo(() => cleanChunks(script.thoughtChunks), [script.thoughtChunks]);
-  const loop = useShadowLoop(chunks, player, modelRate);
+  const rawLoop = useShadowLoop(chunks, player, modelRate);
+  const loop = {
+    ...rawLoop,
+    run: async (startAt = 0, onlyOne = false) => {
+      tutor.hold();
+      try {
+        await rawLoop.run(startAt, onlyOne);
+      } finally {
+        tutor.release();
+      }
+      if (!onlyOne && tutor.live) tutor.send("shadow_done");
+    },
+  };
   const recorder = useRecorder();
+  const deliveryHeld = useRef(false);
+  const holdForDelivery = () => {
+    if (!deliveryHeld.current) {
+      deliveryHeld.current = true;
+      tutor.hold();
+    }
+  };
+  const releaseDelivery = () => {
+    if (deliveryHeld.current) {
+      deliveryHeld.current = false;
+      tutor.release();
+    }
+  };
+  const cancelDelivery = () => {
+    recorder.cancel();
+    releaseDelivery();
+  };
+
+  // Prepare the coach's readings in the background: the whole script, then each phrase.
+  useEffect(() => {
+    let cancelled = false;
+    void prefetchModelAudio([script.upgradedScript, ...chunks], modelVoice, () => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [script.upgradedScript, chunks, modelVoice]);
   const coach = useCoach();
   const [deliverError, setDeliverError] = useState<string | null>(null);
 
@@ -88,8 +191,9 @@ function PracticeSession({
     if (p === phase) return;
     loop.stop();
     player.stop();
-    if (recorder.isRecording) recorder.cancel();
+    if (recorder.isRecording) cancelDelivery();
     setPhase(p);
+    if (tutor.live && p !== "result") tutor.send(`phase ${p}`);
   };
 
   const startDelivery = async () => {
@@ -97,12 +201,14 @@ function PracticeSession({
     player.stop();
     coach.reset();
     setDeliverError(null);
-    await recorder.start();
+    holdForDelivery();
+    if (!(await recorder.start())) releaseDelivery();
   };
 
   const finishDelivery = async () => {
     const take = await recorder.stop();
     if (!take) {
+      releaseDelivery();
       setDeliverError("No audio was captured. Check your microphone and try again.");
       return;
     }
@@ -110,7 +216,11 @@ function PracticeSession({
     takeUrlRef.current = URL.createObjectURL(take.blob);
     setTakeUrl(takeUrlRef.current);
     const result = await coach.analyze(script, take, targetBand);
-    if (result) setPhase("result");
+    releaseDelivery();
+    if (result) {
+      setPhase("result");
+      if (tutor.live) tutor.send("result", resultForTutor(result));
+    }
   };
 
   return (
@@ -138,6 +248,8 @@ function PracticeSession({
           )}
         </div>
       </div>
+
+      <TutorPanel tutor={tutor} persona={persona} />
 
       <header className="space-y-2">
         <SectionLabel>{script.part ? `IELTS Part ${script.part} · ${script.topic}` : script.title}</SectionLabel>
@@ -204,7 +316,7 @@ function PracticeSession({
       {phase === "deliver" && (
         <DeliverPanel
           script={script}
-          recorder={recorder}
+          recorder={{ ...recorder, cancel: cancelDelivery }}
           isAnalyzing={coach.isAnalyzing}
           error={deliverError ?? coach.error}
           onStart={() => void startDelivery()}

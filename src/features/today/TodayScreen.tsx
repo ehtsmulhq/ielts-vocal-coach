@@ -8,6 +8,10 @@ import { headlineScore } from "@/domain/attempt";
 import { Badge, ButtonLink, Card, SectionLabel, scoreTone } from "@/ui/primitives";
 import { useAttempts, useHydrated, usePreferences, useProfile, useScriptVault, useHasCaptured } from "@/features/shared/stores";
 import { WelcomeCard } from "./WelcomeCard";
+import { CoachGreeting } from "@/features/tutor/CoachGreeting";
+import { buildGreeting } from "@/domain/greeting";
+import { recentAreaAverages, weakestArea } from "@/domain/progress";
+import { getTutor } from "@/lib/tutors";
 import { buildPacks, findScript, scriptLabel, suggestScript } from "@/features/library/catalog";
 
 const STEPS = [
@@ -41,6 +45,20 @@ export function TodayScreen() {
 
   if (isNew && !prefs.onboarded) return <WelcomeCard profile={profile} firstScript={suggestion} />;
 
+  const persona = getTutor(prefs.tutorId);
+  const lastAttempt = attempts[attempts.length - 1];
+  const greeting = hydrated
+    ? buildGreeting({
+        learnerName: name,
+        hour: new Date().getHours(),
+        streak,
+        totalReps: Math.max(vault.totalPracticeCount, attempts.length),
+        lastScore: lastAttempt ? headlineScore(lastAttempt) : undefined,
+        focusArea: weakestArea(recentAreaAverages(attempts)),
+        scriptTopic: suggestion ? (suggestion.topic ?? suggestion.title).toLowerCase() : undefined,
+      })
+    : "";
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -52,6 +70,8 @@ export function TodayScreen() {
           what to fix.
         </p>
       </header>
+
+      {greeting && <CoachGreeting persona={persona} text={greeting} />}
 
       {isNew && (
         <ol className="grid gap-3 sm:grid-cols-3">

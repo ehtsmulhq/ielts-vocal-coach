@@ -9,6 +9,13 @@ import { z } from "zod";
 export const TargetBandSchema = z.enum(["5.5", "6.5", "7.5"]);
 export const StageSchema = z.enum(["part1", "part2", "part3"]);
 
+/** Names are interpolated into the examiner prompt, so only plain name characters are allowed. */
+const PersonName = z
+  .string()
+  .trim()
+  .max(60)
+  .regex(/^[\p{L}\p{M} .'-]*$/u, "may only contain letters, spaces, apostrophes, hyphens and full stops");
+
 /** ~7.5 MB of base64 ≈ 5.6 MB of audio: about 3 minutes of WAV or far longer as Opus. */
 export const MAX_AUDIO_BASE64_CHARS = 7_500_000;
 export const MAX_SCRIPT_CHARS = 4_000;
@@ -119,13 +126,6 @@ export const ModelAudioRequestSchema = z.object({
 export type ModelAudioRequest = z.infer<typeof ModelAudioRequestSchema>;
 
 // ---------------------------------------------------------------- live token
-/** Names are interpolated into the examiner prompt, so only plain name characters are allowed. */
-const PersonName = z
-  .string()
-  .trim()
-  .max(60)
-  .regex(/^[\p{L}\p{M} .'-]*$/u, "may only contain letters, spaces, apostrophes, hyphens and full stops");
-
 export const TokenRequestSchema = z.object({
   model: z.string().max(80).optional(),
   voice: z.string().max(40).optional(),
@@ -134,6 +134,33 @@ export const TokenRequestSchema = z.object({
   sceneId: z.string().max(80).optional(),
   candidate: z.object({ preferredName: PersonName.default(""), fullName: PersonName.default("") }).default({ preferredName: "", fullName: "" }),
 });
+
+// ---------------------------------------------------------------- tutor
+const Capped = (n: number) => z.string().max(n);
+
+/** What the tutor needs to know about the script (personal scripts live only in the browser). */
+export const TutorScriptSchema = z.object({
+  title: Capped(120),
+  question: Capped(300),
+  upgradedScript: z.string().min(1).max(MAX_SCRIPT_CHARS),
+  thoughtChunks: z.array(Capped(500)).max(60),
+  stressedWords: z.array(Capped(60)).max(20),
+  targetCollocations: z.array(z.object({ phrase: Capped(120), meaning: Capped(300), phoneticTip: Capped(300) })).max(10),
+});
+
+export const TutorTokenRequestSchema = z.object({
+  tutorId: z.string().max(20),
+  learnerName: PersonName.default(""),
+  script: TutorScriptSchema,
+  context: z
+    .object({
+      focusArea: z.enum(["sounds", "stress", "rhythm", "intonation"]).optional(),
+      lastScore: z.number().min(0).max(100).optional(),
+      reps: z.number().int().min(0).max(100000).optional(),
+    })
+    .default({}),
+});
+export type TutorTokenRequest = z.output<typeof TutorTokenRequestSchema>;
 
 // ---------------------------------------------------------------- lesson
 export const LessonRequestSchema = z.object({

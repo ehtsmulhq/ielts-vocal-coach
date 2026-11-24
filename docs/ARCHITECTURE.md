@@ -60,7 +60,8 @@ All routes validate input with the shared Zod contracts in `src/domain/contracts
 
 | Route | Purpose | Model |
 | :--- | :--- | :--- |
-| `POST /api/model-audio` | British RP model clip as WAV (trimmed, single header) | `TTS_MODELS` |
+| `POST /api/model-audio` | Model clip as WAV, read by the coach's Live voice; the reading's transcript must match the script (else retry, then TTS) | `LIVE_RENDER_MODEL`, then `TTS_MODELS` |
+| `POST /api/tutor-token` | Single-use Live token for the coach, locked to the coach's voice and a teaching prompt built from the (length-capped) script | Live |
 | `POST /api/mirror-coach` | accent coaching from the model clip + learner take | `TEXT_MODELS`, scoring mode |
 | `POST /api/lesson` | interview questions (built-in banks, else generated) | `TEXT_MODELS`, creative mode |
 | `POST /api/token` | single-use Live token, locked to model, voice and a server-built examiner prompt | Live |
@@ -69,6 +70,10 @@ All routes validate input with the shared Zod contracts in `src/domain/contracts
 | `GET /api/ping` | latency probe for the live session | none |
 
 `server/gemini.ts` tries each configured model in order and only moves on for retryable failures (rate limit, server error, unknown model, unparseable output). Scoring uses temperature 0.2; content generation 1.0.
+
+## Personal coach
+
+`lib/tutors.ts` defines the coaches (name, Live voice, style); the chosen coach is a preference, and model clips use the same voice. On the practice page, `features/tutor/useTutor.ts` opens a Live session with a token from `/api/tutor-token`. The prompt (`server/tutor-prompt.ts`) defines the persona and an event protocol: the app sends `[EVENT] start`, `phase listen|shadow|deliver`, `shadow_done`, `result {json}` and `goodbye`, and the learner can talk freely in between. While a model clip plays or the learner records, the page calls `hold()` (mic not sent, coach interrupted) and `release()` afterwards; holds nest. Today's greeting text comes from `domain/greeting.ts` and is read by the coach's voice through `/api/model-audio`. Clips for a script are prefetched in the background when its page opens.
 
 ## Live interview
 

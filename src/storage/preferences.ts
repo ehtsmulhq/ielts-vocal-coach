@@ -1,5 +1,6 @@
 import { createStore } from "./store";
 import { STORAGE_KEYS } from "./registry";
+import { DEFAULT_TUTOR_ID, getTutor, tutorForVoice } from "@/lib/tutors";
 
 export type ThemePreference = "system" | "light" | "dark";
 
@@ -7,13 +8,21 @@ export interface Preferences {
   theme: ThemePreference;
   /** Default playback speed for the model voice. */
   modelRate: number;
-  /** Prebuilt Gemini voice used for the British RP model. */
+  /** The learner's coach (see lib/tutors.ts). */
+  tutorId: string;
+  /** Voice for model clips: always the coach's voice, kept in sync with tutorId. */
   modelVoice: string;
   /** Whether the first-run welcome has been completed or skipped. */
   onboarded: boolean;
 }
 
-export const DEFAULT_PREFERENCES: Preferences = { theme: "system", modelRate: 0.85, modelVoice: "Puck", onboarded: false };
+export const DEFAULT_PREFERENCES: Preferences = {
+  theme: "system",
+  modelRate: 0.85,
+  tutorId: DEFAULT_TUTOR_ID,
+  modelVoice: getTutor(DEFAULT_TUTOR_ID).voice,
+  onboarded: false,
+};
 
 const RATES = [0.75, 0.85, 1];
 
@@ -22,7 +31,11 @@ export function migratePreferences(data: unknown): Preferences {
   return {
     theme: d.theme === "light" || d.theme === "dark" || d.theme === "system" ? d.theme : DEFAULT_PREFERENCES.theme,
     modelRate: typeof d.modelRate === "number" && RATES.includes(d.modelRate) ? d.modelRate : DEFAULT_PREFERENCES.modelRate,
-    modelVoice: typeof d.modelVoice === "string" && /^[A-Za-z]{2,20}$/.test(d.modelVoice) ? d.modelVoice : DEFAULT_PREFERENCES.modelVoice,
+    // Older versions stored only a voice; map it to the coach who speaks with it.
+    ...(() => {
+      const tutor = getTutor(typeof d.tutorId === "string" ? d.tutorId : tutorForVoice(d.modelVoice)?.id);
+      return { tutorId: tutor.id, modelVoice: tutor.voice };
+    })(),
     onboarded: d.onboarded === true,
   };
 }
@@ -38,8 +51,11 @@ export const subscribePreferences = preferencesStore.subscribe;
 export const getPreferencesSnapshot = preferencesStore.get;
 export const getPreferencesServerSnapshot = preferencesStore.getServerSnapshot;
 
-export function updatePreferences(patch: Partial<Preferences>): void {
-  preferencesStore.update((p) => ({ ...p, ...patch }));
+export function updatePreferences(patch: Partial<Omit<Preferences, "modelVoice">>): void {
+  preferencesStore.update((p) => {
+    const next = { ...p, ...patch };
+    return { ...next, modelVoice: getTutor(next.tutorId).voice };
+  });
 }
 
 /**

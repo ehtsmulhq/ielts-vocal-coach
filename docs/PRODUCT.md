@@ -8,11 +8,15 @@
 
 Any learner who wants a clearer, more natural British accent. IELTS Speaking candidates are the first audience (the built-in library and the interview are IELTS-style), but the method and the app are not exam-specific.
 
+## Your coach
+
+Every learner picks a named British coach (Olivia, James, Amelia or Harry). The coach greets them on Today with a message built from their own progress, reads every script they shadow (so the voice they copy is the voice that teaches them), and can run a two-way voice lesson on any script: guiding each step, explaining results out loud, modelling the corrected phrase, and answering questions.
+
 ## The core loop
 
 | Step | What the learner does | What the app does |
 | :--- | :--- | :--- |
-| Listen | Hears the script read by a British RP model | Plays a cached Gemini TTS clip at 0.75x, 0.85x or 1x; marks stressed words |
+| Listen | Hears the script read by their coach in a British RP accent | Plays the coach's cached Live reading at 0.75x, 0.85x or 1x; marks stressed words |
 | Shadow | Repeats each breath group straight after the model | Plays a phrase, opens the mic for about as long, keeps each repeat for A/B |
 | Deliver | Says the whole answer | Sends model clip + take to the coach; returns accent scores, one focus tip, mistakes with sound/stress tips, and a before/after against the last take |
 
