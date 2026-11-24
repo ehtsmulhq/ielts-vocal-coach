@@ -23,7 +23,7 @@ export interface LiveRendering {
 
 const SAMPLE_RATE = 24000;
 
-export async function renderWithLive(text: string, voice: string, model: string, timeoutMs = 50_000): Promise<LiveRendering> {
+export async function renderWithLive(text: string, voice: string, model: string, timeoutMs = 25_000): Promise<LiveRendering> {
   const apiKey = getApiKey();
   if (!apiKey) throw new NotConfiguredError();
   const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1alpha" } });

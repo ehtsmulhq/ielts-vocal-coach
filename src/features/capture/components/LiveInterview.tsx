@@ -86,7 +86,7 @@ export function LiveInterview({ session }: { session: CaptureSession }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="flex min-h-[420px] flex-col justify-center lg:col-span-2">
+        <Card className="flex min-h-[320px] flex-col justify-center sm:min-h-[420px] lg:col-span-2">
           <VoiceOrb
             status={state.liveStatus}
             micAnalyser={state.micAnalyser}
@@ -104,7 +104,7 @@ export function LiveInterview({ session }: { session: CaptureSession }) {
           />
         </Card>
 
-        <Card className="flex h-[560px] flex-col gap-3 lg:col-span-3">
+        <Card className="flex h-[70dvh] flex-col gap-3 lg:h-[560px] lg:col-span-3">
           <div role="tablist" aria-label="Interview panels" className="flex gap-1">
             {(["questions", "transcript"] as const).map((t) => (
               <button

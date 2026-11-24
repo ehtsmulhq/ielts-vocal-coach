@@ -43,9 +43,9 @@ export function Dialog({
       onClick={(e) => {
         if (e.target === ref.current) onClose(); // click on the backdrop
       }}
-      className="m-auto w-[min(36rem,calc(100vw-2rem))] max-h-[calc(100vh-2rem)] rounded-[var(--radius-card)] border border-line bg-surface p-0 text-fg backdrop:bg-black/50"
+      className="m-auto w-[min(36rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface p-0 text-fg backdrop:bg-black/50"
     >
-      <div className="space-y-4 p-6">
+      <div className="max-h-[calc(100dvh-2rem)] space-y-4 overflow-y-auto p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h2 id={titleId} className="font-serif text-xl font-semibold">
@@ -61,7 +61,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-full p-1 text-subtle hover:bg-surface-2 hover:text-fg cursor-pointer"
+            className="-m-1.5 rounded-full p-2.5 text-subtle hover:bg-surface-2 hover:text-fg cursor-pointer"
           >
             <X className="h-5 w-5" aria-hidden />
           </button>

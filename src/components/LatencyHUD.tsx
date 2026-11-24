@@ -40,7 +40,7 @@ export function LatencyHUD({ telemetry, activeModelName }: LatencyHUDProps) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 font-mono text-xs text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer"
+        className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 font-mono text-xs text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer"
         title="View live network latency and telemetry"
       >
         <Activity className="w-3 h-3 text-subtle" />

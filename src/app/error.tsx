@@ -9,7 +9,7 @@ export default function ErrorBoundary({ error, retry }: { error: Error & { diges
   }, [error]);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
       <h1 className="font-serif text-3xl font-semibold">Something went wrong</h1>
       <p className="text-muted">
         The page hit an unexpected error. Your saved practice is stored in this browser and has not been lost.

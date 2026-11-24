@@ -14,6 +14,13 @@ export function apiError(code: ApiErrorCode, status: number, message: string, he
   return Response.json({ error: { code, message } }, { status, headers });
 }
 
+/** 503 shown when Gemini is rate-limiting us or the app's daily AI budget is spent. */
+export function aiBusy(retryAfterSec = 60): Response {
+  return apiError("upstream_unavailable", 503, "The AI service is busy right now. Please try again in a minute.", {
+    "Retry-After": String(retryAfterSec),
+  });
+}
+
 /** Thrown by the Gemini helpers when every configured model failed. */
 export class UpstreamError extends Error {
   constructor(
@@ -40,9 +47,7 @@ export function handleRouteError(route: string, err: unknown): Response {
   }
   if (err instanceof UpstreamError) {
     return err.status === 429
-      ? apiError("upstream_unavailable", 503, "The AI service is busy right now. Please try again in a minute.", {
-          "Retry-After": "60",
-        })
+      ? aiBusy()
       : apiError("upstream_unavailable", 502, "The AI service could not complete this request. Please try again.");
   }
   return apiError("internal", 500, "Something went wrong on our side. Please try again.");

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useId, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { ChevronDown, GripVertical, Mic, MicOff, PhoneOff, Sparkles } from "lucide-react";
 import { Alert, Button, cn } from "@/ui/primitives";
 import { useHydrated, usePreferences } from "@/features/shared/stores";
 import { updatePreferences } from "@/storage/preferences";
 import { useVoiceCoach, type Tutor } from "./CoachProvider";
+import { PHONE_QUERY, SHORT_QUERY, useMediaQuery } from "@/features/shared/useMediaQuery";
 import { TutorAvatar } from "./TutorAvatar";
 import { clampToViewport, nudge, type Point } from "./floating";
 
@@ -65,6 +66,10 @@ const viewport = () => ({ width: window.innerWidth, height: window.innerHeight }
 export function CoachChat() {
   const tutor = useVoiceCoach();
   const { persona, log } = tutor;
+  // Phones get a bottom sheet above the tab bar instead of a draggable floating window.
+  const narrow = useMediaQuery(PHONE_QUERY); // tab bar showing
+  const short = useMediaQuery(SHORT_QUERY); // landscape phone
+  const phone = narrow || short;
   const { coachPosition } = usePreferences();
   const [pos, setPos] = useState<Point | null>(coachPosition);
   const [dragging, setDragging] = useState(false);
@@ -102,7 +107,7 @@ export function CoachChat() {
 
   const setOpen = (value: boolean) => {
     // Opening near the bottom of the screen nudges the window up so the conversation isn't cut off.
-    if (value && !open && pos) place(fit(pos, THREAD_PX));
+    if (value && !open && pos && !phone) place(fit(pos, THREAD_PX));
     setOpenState(value);
     setReadCount(log.length);
   };
@@ -125,6 +130,18 @@ export function CoachChat() {
       observer?.disconnect();
     };
   }, []);
+
+  // On phones the sheet sits above the tab bar: tell the page how much room to leave at the bottom.
+  useEffect(() => {
+    if (!phone) return;
+    const root = document.documentElement;
+    // Portrait: tab bar + sheet. Landscape (no tab bar): the sheet alone.
+    const name = narrow ? "--mobile-bottom-ui" : "--landscape-room";
+    root.style.setProperty(name, narrow ? "8.5rem" : "4.5rem");
+    return () => {
+      root.style.removeProperty(name);
+    };
+  }, [phone, narrow]);
 
   // Keep the newest message in view (scrolls the thread only, never the page).
   useEffect(() => {
@@ -162,28 +179,44 @@ export function CoachChat() {
       onKeyDown={(e) => {
         if (e.key === "Escape" && open) setOpen(false);
       }}
-      // Default spot: centred, just under the navbar.
-      style={pos ? { left: pos.x, top: pos.y } : { top: navHeight + GAP_PX }}
+      // Phones: a sheet pinned above the tab bar. Desktop: default spot centred just under the navbar.
+      style={
+        phone
+          ? { bottom: narrow ? "calc(4rem + env(safe-area-inset-bottom))" : "env(safe-area-inset-bottom)" }
+          : pos
+            ? { left: pos.x, top: pos.y }
+            : { top: navHeight + GAP_PX }
+      }
       className={cn(
-        "fixed z-40 w-[min(26rem,calc(100vw-1rem))] overflow-hidden rounded-2xl border border-line bg-surface shadow-xl",
-        !pos && "left-1/2 -translate-x-1/2",
+        "fixed z-40 overflow-hidden bg-surface",
+        phone
+          ? "inset-x-0 rounded-t-2xl border-t border-line shadow-[0_-12px_32px_-12px_rgba(0,0,0,0.45)]"
+          : "w-[min(26rem,calc(100vw-1rem))] rounded-2xl border border-line shadow-xl",
+        !phone && !pos && "left-1/2 -translate-x-1/2",
         dragging && "shadow-2xl ring-2 ring-accent/30"
       )}
     >
       <header
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onDoubleClick={(e) => {
-          if (!(e.target as HTMLElement).closest("button")) place(null);
-        }}
-        title="Drag to move. Double-click to put it back."
+        {...(phone
+          ? {}
+          : {
+              onPointerDown,
+              onPointerMove,
+              onPointerUp: endDrag,
+              onPointerCancel: endDrag,
+              onDoubleClick: (e: ReactMouseEvent) => {
+                if (!(e.target as HTMLElement).closest("button")) place(null);
+              },
+              title: "Drag to move. Double-click to put it back.",
+            })}
         className={cn(
-          "flex min-h-[4.5rem] touch-none select-none items-center gap-2 py-3 pl-1.5 pr-3",
-          dragging ? "cursor-grabbing" : "cursor-grab"
+          "flex items-center gap-2",
+          phone
+            ? "min-h-16 px-3 py-2"
+            : cn("min-h-[4.5rem] touch-none select-none py-3 pl-1.5 pr-3", dragging ? "cursor-grabbing" : "cursor-grab")
         )}
       >
+        {!phone && (
         <button
           type="button"
           aria-label="Move chat window. Use the arrow keys; Home puts it back."
@@ -203,6 +236,7 @@ export function CoachChat() {
         >
           <GripVertical className="h-4 w-4" aria-hidden />
         </button>
+        )}
         <span className="relative">
           <TutorAvatar persona={persona} speaking={tutor.speaking} />
           {unread && (
@@ -292,7 +326,7 @@ export function CoachChat() {
             role="log"
             aria-live="polite"
             aria-label="Conversation"
-            className="flex h-72 flex-col gap-2 overflow-y-auto border-t border-line px-4 py-4"
+            className={cn("flex flex-col gap-2 overflow-y-auto border-t border-line px-4 py-4", phone ? "h-[min(18rem,45dvh)]" : "h-72")}
           >
             {log.length === 0 && !lessonOn && (
               <p className="m-auto max-w-sm text-center text-sm text-muted">
@@ -304,7 +338,7 @@ export function CoachChat() {
               <div
                 key={m.id}
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
+                  "max-w-[85%] break-words rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
                   m.role === "coach"
                     ? "self-start rounded-bl-md bg-surface-2 text-fg"
                     : "self-end rounded-br-md bg-accent text-on-accent"

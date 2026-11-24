@@ -19,7 +19,8 @@ const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   danger: "border border-danger/40 bg-danger-soft text-danger hover:border-danger",
 };
 const BUTTON_SIZES: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-xs",
+  // 40px tall on touch screens (comfortable to tap), compact 32px from the sm breakpoint up.
+  sm: "h-10 px-3.5 text-sm sm:h-8 sm:px-3 sm:text-xs",
   md: "h-10 px-4 text-sm",
   lg: "h-12 px-6 text-base",
 };

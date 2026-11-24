@@ -1,7 +1,7 @@
 import { guardRequest, LIMITS } from "@/server/guard";
 
 export async function GET(request: Request) {
-  const guarded = guardRequest(request, { route: "ping", ...LIMITS.ping });
+  const guarded = await guardRequest(request, { route: "ping", ...LIMITS.ping });
   if (!guarded.ok) return guarded.response;
   const start = Date.now();
   let googleRttMs: number | null = null;

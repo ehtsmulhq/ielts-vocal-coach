@@ -230,7 +230,7 @@ function PracticeSession({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <Link href="/library" className="flex items-center gap-1 text-muted hover:text-fg">
+        <Link href="/library" className="-my-2.5 flex items-center gap-1 py-2.5 text-muted hover:text-fg">
           <ChevronLeft className="h-4 w-4" aria-hidden /> {loc.pack.name}
         </Link>
         <div className="flex items-center gap-3 text-muted">
@@ -241,12 +241,12 @@ function PracticeSession({
             </span>
           )}
           {prev && (
-            <Link href={`/practice/${prev.id}`} aria-label="Previous script" className="hover:text-fg">
+            <Link href={`/practice/${prev.id}`} aria-label="Previous script" className="-m-2 grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2 hover:text-fg">
               <ChevronLeft className="h-5 w-5" aria-hidden />
             </Link>
           )}
           {next && (
-            <Link href={`/practice/${next.id}`} aria-label="Next script" className="hover:text-fg">
+            <Link href={`/practice/${next.id}`} aria-label="Next script" className="-m-2 grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2 hover:text-fg">
               <ChevronRight className="h-5 w-5" aria-hidden />
             </Link>
           )}
@@ -271,7 +271,7 @@ function PracticeSession({
                     aria-current={phase === p.id ? "step" : undefined}
                     onClick={() => goTo(p.id)}
                     className={cn(
-                      "rounded-full px-3 py-1.5 text-sm transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40",
+                      "rounded-full px-3.5 py-2.5 text-sm transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 sm:px-3 sm:py-1.5",
                       phase === p.id ? "bg-fg text-bg font-medium" : "border border-line text-muted hover:text-fg"
                     )}
                   >
@@ -292,7 +292,7 @@ function PracticeSession({
               aria-checked={modelRate === r}
               onClick={() => updatePreferences({ modelRate: r })}
               className={cn(
-                "rounded-full px-2.5 py-1 tabular-nums cursor-pointer",
+                "rounded-full px-3 py-2.5 tabular-nums cursor-pointer sm:px-2.5 sm:py-1",
                 modelRate === r ? "bg-surface-2 font-medium text-fg" : "text-muted hover:text-fg"
               )}
             >
