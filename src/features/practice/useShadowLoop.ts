@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { recordFor } from "./audio";
+import { recordFor, waitMs } from "./audio";
 import type { ModelPlayer } from "./useModelPlayer";
 
 /**
@@ -36,7 +36,10 @@ export function useShadowLoop(chunks: string[], player: ModelPlayer, rate: numbe
         for (let i = startAt; i < chunks.length; i++) {
           if (abortRef.current) break;
           setActiveChunk(i);
-          const { ms } = await player.playModel(chunks[i], rate);
+          const { ok, ms } = await player.playModel(chunks[i], rate);
+          // The browser-voice fallback returns before it has finished speaking: wait it out so the
+          // mic doesn't record the model.
+          if (!ok) await waitMs(ms, () => abortRef.current);
           if (abortRef.current) break;
           setTurnActive(true);
           const blob = await recordFor(Math.max(1500, ms * 1.25 + 600), () => abortRef.current);

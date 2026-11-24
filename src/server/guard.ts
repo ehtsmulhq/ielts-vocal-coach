@@ -1,7 +1,7 @@
 import "server-only";
 import type { z } from "zod";
 import { apiError } from "./errors";
-import { ALLOWED_ORIGINS } from "./config";
+import { ALLOWED_ORIGINS, TRUST_PROXY } from "./config";
 
 /**
  * Request guard for API routes: same-origin check, per-client rate limit, body
@@ -46,10 +46,19 @@ export function checkRateLimit(
   return { ok: true };
 }
 
-export function clientKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("x-real-ip") || "local";
+/**
+ * Who is calling. Behind a trusted proxy (TRUST_PROXY=1) the proxy's own hop,
+ * the LAST X-Forwarded-For entry, is used; otherwise every caller shares one
+ * bucket, so a spoofed header can't mint fresh rate-limit allowances.
+ */
+export function clientKey(request: Request, trustProxy = TRUST_PROXY): string {
+  if (!trustProxy) return "local";
+  const hops = request.headers.get("x-forwarded-for")?.split(",").map((h) => h.trim()).filter(Boolean);
+  return hops?.[hops.length - 1] || request.headers.get("x-real-ip") || "local";
 }
+
+/** Backstop: no matter how many client identities exist, one route has a total cap. */
+const GLOBAL_FACTOR = 10;
 
 /**
  * Browsers send `Origin` on cross-site and POST requests. Requests without it
@@ -81,12 +90,14 @@ function preflight(request: Request, opts: GuardOptions): GuardFailure | null {
   if (!isAllowedOrigin(request)) {
     return { ok: false, response: apiError("forbidden_origin", 403, "This API only accepts requests from the app.") };
   }
-  const limited = checkRateLimit(`${opts.route}:${clientKey(request)}`, opts.rateLimit);
-  if (!limited.ok) {
+  const perClient = checkRateLimit(`${opts.route}:${clientKey(request)}`, opts.rateLimit);
+  const overall = checkRateLimit(`${opts.route}:*`, { ...opts.rateLimit, max: opts.rateLimit.max * GLOBAL_FACTOR });
+  const blocked = !perClient.ok ? perClient : !overall.ok ? overall : null;
+  if (blocked && !blocked.ok) {
     return {
       ok: false,
       response: apiError("rate_limited", 429, "Too many requests. Please slow down and try again shortly.", {
-        "Retry-After": String(limited.retryAfterSec),
+        "Retry-After": String(blocked.retryAfterSec),
       }),
     };
   }
@@ -147,5 +158,6 @@ export const LIMITS = {
   lesson: { maxBytes: 64 * 1024, rateLimit: { max: 12, windowMs: 60_000 } },
   token: { maxBytes: 8 * 1024, rateLimit: { max: 6, windowMs: 60_000 } },
   tutor: { maxBytes: 48 * 1024, rateLimit: { max: 6, windowMs: 60_000 } },
+  greeting: { maxBytes: 16 * 1024, rateLimit: { max: 10, windowMs: 60_000 } },
   ping: { rateLimit: { max: 60, windowMs: 60_000 } },
 } as const;

@@ -1,5 +1,5 @@
 /*
- * Accent Shadowing Gym service worker.
+ * Sounds Like You service worker.
  * - Static build assets and icons: cache-first (they are content-hashed).
  * - Page navigations: network-first, falling back to the cached page, then to
  *   the cached Today page, so the app shell opens offline.

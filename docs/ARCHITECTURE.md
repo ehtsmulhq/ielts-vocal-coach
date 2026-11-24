@@ -77,7 +77,7 @@ All routes validate input with the shared Zod contracts in `src/domain/contracts
 
 ## Live interview
 
-`features/capture/captureReducer.ts` holds all interview state. The `LiveSession` WebSocket (`lib/live-session.ts`) only dispatches actions; effects in `useCaptureSession` react to state to send stage cues, auto-advance (`domain/capture.ts`), keep the clock, save the draft and grade. The token from `/api/token` is locked to the examiner prompt, so a leaked token can't drive a general-purpose session on the project's key.
+`features/capture/captureReducer.ts` holds all interview state. The `LiveSession` WebSocket (`lib/live-session.ts`) only dispatches actions; effects in `useCaptureSession` react to state to send stage cues, auto-advance (`domain/capture.ts`), keep the clock, save the draft and grade. The token from `/api/token` is locked to the model, voice and an examiner prompt built only from the server's own question banks. (The coach token from `/api/tutor-token` is also locked, but its prompt embeds the learner's script text; that text is length-capped, stripped of control characters and delimited as data, which reduces but does not eliminate prompt-injection risk. Rate limits are the backstop.)
 
 ## Security and limits
 

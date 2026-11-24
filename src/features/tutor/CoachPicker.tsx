@@ -3,7 +3,7 @@
 import { Play, Square } from "lucide-react";
 import { cn } from "@/ui/primitives";
 import { TUTORS, type Tutor } from "@/lib/tutors";
-import { TutorAvatar } from "./TutorPanel";
+import { TutorAvatar } from "./TutorAvatar";
 
 export const coachIntro = (t: Tutor) =>
   `Hello, I'm ${t.name}. I'll be your coach. Let's make your English sound natural and confident.`;

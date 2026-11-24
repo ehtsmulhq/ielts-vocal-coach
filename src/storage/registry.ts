@@ -9,9 +9,20 @@ export const STORAGE_KEYS = {
   attempts: "vocal_lab_attempts_v1",
   preferences: "vocal_lab_preferences_v1",
   capture: "vocal_lab_capture_v1",
+  lessons: "vocal_lab_lessons_v1",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
+
+/**
+ * Per-tab session storage: the live coach lesson (resume handle and chat), so a
+ * reload carries on the same conversation. Not exported in backups.
+ */
+export const SESSION_KEYS = {
+  coachLesson: "vocal_lab_coach_lesson_v1",
+  /** Today's coach greeting, so it stays the same while the learner browses this session. */
+  coachGreeting: "vocal_lab_coach_greeting_v1",
+} as const;
 
 /** Keys from earlier app versions. They are removed on startup and never read. */
 export const LEGACY_KEYS = ["vocal_lab_master_script_v1", "vocal_lab_history", "vocal_lab_app_version"] as const;

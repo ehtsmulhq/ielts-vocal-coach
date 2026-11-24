@@ -5,17 +5,18 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ScriptItem } from "@/domain/contracts";
 import { Alert, ButtonLink, Card, cn, SectionLabel } from "@/ui/primitives";
-import { useAttempts, useHydrated, usePreferences, useProfile, useScriptVault, useHasCaptured } from "@/features/shared/stores";
+import { useAttempts, useHydrated, usePreferences, useScriptVault, useHasCaptured } from "@/features/shared/stores";
 import { buildPacks, findScript, neighbours, type ScriptLocation } from "@/features/library/catalog";
 import { updatePreferences } from "@/storage/preferences";
 import { cleanChunks } from "./audio";
 import { useModelPlayer, type ModelPlayer } from "./useModelPlayer";
 import { prefetchModelAudio } from "@/lib/model-audio";
-import { getTutor } from "@/lib/tutors";
-import { attemptsFor, headlineScore } from "@/domain/attempt";
+import { headlineScore } from "@/domain/attempt";
 import { recentAreaAverages, weakestArea } from "@/domain/progress";
-import { useTutor } from "@/features/tutor/useTutor";
-import { TutorPanel } from "@/features/tutor/TutorPanel";
+import { buildLearnerContext } from "@/domain/learner-context";
+import { getLessonsSnapshot } from "@/storage/lessons";
+import { useCoachForScript } from "@/features/tutor/CoachProvider";
+import { CoachSpeakingHint } from "@/features/tutor/CoachSpeakingHint";
 import type { CoachResult } from "./useCoach";
 import { useShadowLoop } from "./useShadowLoop";
 import { useRecorder } from "./useRecorder";
@@ -96,22 +97,25 @@ function PracticeSession({
 }) {
   const script: ScriptItem = loc.script;
   const { prev, next } = neighbours(loc);
-  const { modelRate, tutorId, modelVoice } = usePreferences();
-  const profile = useProfile();
+  const { modelRate, modelVoice } = usePreferences();
   const attempts = useAttempts();
-  const persona = getTutor(tutorId);
-  const tutorContext = useMemo(() => {
-    const mine = attemptsFor(attempts, script.id);
-    const last = mine[mine.length - 1];
-    return {
-      focusArea: weakestArea(recentAreaAverages(attempts)) ?? undefined,
-      lastScore: last ? Math.round(headlineScore(last)) : undefined,
-      reps: mine.length,
-    };
-  }, [attempts, script.id]);
-  const tutor = useTutor({ script, learnerName: profile.preferredName, tutorId: persona.id, context: tutorContext });
-
+  const vault = useScriptVault();
   const [phase, setPhase] = useState<Phase>("listen");
+  // The coach is one lesson for the whole app; this page just puts its script in front of them.
+  // The context is built at the moment a lesson connects, so "back after 5 minutes" and "back after 4 days" sound different.
+  const tutor = useCoachForScript(script, () =>
+    buildLearnerContext({
+      now: new Date(),
+      scriptId: script.id,
+      phase,
+      attempts,
+      lessons: getLessonsSnapshot(),
+      focusArea: weakestArea(recentAreaAverages(attempts)),
+      streak: vault.dayStreak ?? 0,
+      lastPracticeDay: vault.lastPracticeDay,
+    })
+  );
+
   const [takeUrl, setTakeUrl] = useState<string | null>(null);
   const takeUrlRef = useRef<string | null>(null);
 
@@ -249,8 +253,6 @@ function PracticeSession({
         </div>
       </div>
 
-      <TutorPanel tutor={tutor} persona={persona} />
-
       <header className="space-y-2">
         <SectionLabel>{script.part ? `IELTS Part ${script.part} · ${script.topic}` : script.title}</SectionLabel>
         <h1 className="font-serif text-2xl font-semibold leading-snug sm:text-3xl">&ldquo;{script.question}&rdquo;</h1>
@@ -306,6 +308,8 @@ function PracticeSession({
           be a British accent.
         </Alert>
       )}
+
+      <CoachSpeakingHint />
 
       {phase === "listen" && (
         <ListenPanel script={script} player={player} rate={modelRate} onNext={() => goTo("shadow")} />

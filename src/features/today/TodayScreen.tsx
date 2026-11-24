@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight, Flame, Headphones, Mic, Repeat, Sparkles } from "lucide-react";
-import { activeStreak } from "@/domain/stats";
+import { activeStreak, localDay } from "@/domain/stats";
+import { buildLearnerContext } from "@/domain/learner-context";
+import { getLessonsSnapshot } from "@/storage/lessons";
+import { useCoachGreeting } from "./useCoachGreeting";
 import { headlineScore } from "@/domain/attempt";
 import { Badge, ButtonLink, Card, SectionLabel, scoreTone } from "@/ui/primitives";
 import { useAttempts, useHydrated, usePreferences, useProfile, useScriptVault, useHasCaptured } from "@/features/shared/stores";
@@ -43,21 +46,51 @@ export function TodayScreen() {
   const prefs = usePreferences();
   const name = profile.preferredName;
 
-  if (isNew && !prefs.onboarded) return <WelcomeCard profile={profile} firstScript={suggestion} />;
-
   const persona = getTutor(prefs.tutorId);
-  const lastAttempt = attempts[attempts.length - 1];
-  const greeting = hydrated
-    ? buildGreeting({
-        learnerName: name,
-        hour: new Date().getHours(),
-        streak,
-        totalReps: Math.max(vault.totalPracticeCount, attempts.length),
-        lastScore: lastAttempt ? headlineScore(lastAttempt) : undefined,
-        focusArea: weakestArea(recentAreaAverages(attempts)),
-        scriptTopic: suggestion ? (suggestion.topic ?? suggestion.title).toLowerCase() : undefined,
-      })
-    : "";
+  const totalReps = Math.max(vault.totalPracticeCount, attempts.length);
+  const topic = suggestion ? (suggestion.topic ?? suggestion.title) : undefined;
+  // What the coach knows about the learner right now (gaps, sessions today, how it's been going).
+  const situation = () =>
+    buildLearnerContext({
+      now: new Date(),
+      scriptId: suggestion?.id ?? "",
+      phase: "listen",
+      attempts,
+      lessons: getLessonsSnapshot(),
+      focusArea: weakestArea(recentAreaAverages(attempts)),
+      streak: vault.dayStreak ?? 0,
+      lastPracticeDay: vault.lastPracticeDay,
+    });
+  const fallback = () => {
+    const c = situation();
+    const now = new Date();
+    return buildGreeting({
+      learnerName: name,
+      hour: now.getHours(),
+      streak,
+      totalReps,
+      lastScore: c.lastScore,
+      previousScore: c.previousScore,
+      daysSinceLastPractice: c.daysSinceLastPractice,
+      focusArea: c.focusArea,
+      scriptTopic: topic?.toLowerCase(),
+      seed: now.getDate(),
+    });
+  };
+  const greeting = useCoachGreeting({
+    ready: hydrated && !(isNew && !prefs.onboarded),
+    // A new greeting each day, for each coach, and after each new rep.
+    cacheKey: `${hydrated ? localDay(new Date()) : ""}:${persona.id}:${totalReps}`,
+    request: () => ({
+      tutorId: persona.id,
+      learnerName: name,
+      context: situation(),
+      suggestion: suggestion && topic ? { topic: topic.slice(0, 120), question: suggestion.question.slice(0, 300) } : undefined,
+    }),
+    fallback,
+  });
+
+  if (isNew && !prefs.onboarded) return <WelcomeCard profile={profile} firstScript={suggestion} />;
 
   return (
     <div className="space-y-8">
@@ -71,7 +104,9 @@ export function TodayScreen() {
         </p>
       </header>
 
-      {greeting && <CoachGreeting persona={persona} text={greeting} />}
+      {hydrated && (greeting.loading || greeting.text) && (
+        <CoachGreeting persona={persona} text={greeting.text} loading={greeting.loading} />
+      )}
 
       {isNew && (
         <ol className="grid gap-3 sm:grid-cols-3">

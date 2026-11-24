@@ -27,5 +27,6 @@ export const LIVE_VOICES = [
 
 export const DEFAULT_VOICE = "Puck";
 
-export const DEFAULT_TEXT_MODELS = "gemini-3.5-flash-lite,gemini-2.5-flash-lite,gemini-2.5-flash";
+// Fastest first. The Gemini 2.5 models were retired for new users (404), so they are not listed.
+export const DEFAULT_TEXT_MODELS = "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.6-flash,gemini-3.5-flash";
 export const DEFAULT_TTS_MODELS = "gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-3.8-flash-lite-tts";

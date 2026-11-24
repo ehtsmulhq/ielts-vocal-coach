@@ -73,6 +73,7 @@ export function useCoach() {
             intonation: analysis.accent.intonation,
             sounds: analysis.accent.sounds,
           },
+          focusTip: analysis.accent?.focusTip?.slice(0, 300) || undefined,
         });
         previous = getPreviousAttempt(attempt.id) ?? null;
       }

@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Accent Shadowing Gym",
-    short_name: "Shadowing Gym",
+    name: "Sounds Like You",
+    short_name: "Sounds Like You",
     description: "Shadow a British RP model voice phrase by phrase and get accent feedback on every take.",
     start_url: "/",
     scope: "/",

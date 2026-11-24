@@ -2,7 +2,7 @@ import { CandidateProfile, DEFAULT_PROFILE } from "./types";
 import { createStore } from "@/storage/store";
 import { STORAGE_KEYS } from "@/storage/registry";
 import { applyRep, localDay, nextDayStreak, type ItemStats } from "@/domain/stats";
-import { mergeAcceptedScripts } from "@/domain/capture";
+import { isStarterScript, mergeAcceptedScripts } from "@/domain/capture";
 
 export type { ItemStats };
 
@@ -58,16 +58,21 @@ export function migrateScriptVault(data: unknown): MasterScriptRepository {
   // An absent or broken vault never loses data that exists: only missing fields get defaults.
   const fallback = createDefaultMasterRepository();
   const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
+  const itemStats = isRecord(data.itemStats) ? (data.itemStats as Record<string, ItemStats>) : {};
+  const valid = (data.items as unknown[]).filter(
+    (i): i is ScriptItem => isRecord(i) && typeof i.id === "string" && typeof i.upgradedScript === "string"
+  );
+  // Older versions seeded "canonical-*" starters from an example persona. Drop the ones the
+  // learner never practised; practised ones keep their history, and personal scripts are untouched.
+  const items = valid.filter((s) => !isStarterScript(s) || (itemStats[s.id]?.reps ?? 0) > 0);
   return {
     ...fallback,
     ...(data as Partial<MasterScriptRepository>),
     totalPracticeCount: num(data.totalPracticeCount, 0),
     streakReps: num(data.streakReps, 0),
     dayStreak: num(data.dayStreak, 0),
-    itemStats: isRecord(data.itemStats) ? (data.itemStats as Record<string, ItemStats>) : {},
-    items: (data.items as unknown[]).filter(
-      (i): i is ScriptItem => isRecord(i) && typeof i.id === "string" && typeof i.upgradedScript === "string"
-    ),
+    itemStats,
+    items,
   };
 }
 

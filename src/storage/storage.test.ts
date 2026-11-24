@@ -96,11 +96,22 @@ describe("migrations of today's stored data", () => {
     const { itemStats: _i, dayStreak: _d, ...withoutNewFields } = legacy;
     void _i;
     void _d;
-    const migrated = migrateScriptVault({ ...withoutNewFields, totalPracticeCount: 12 });
+    // The learner practised every starter, so their history is kept.
+    const practised = Object.fromEntries(LEGACY_STARTERS.map((s) => [s.id, { reps: 2, bestAccentScore: 70, lastPracticedAt: 1 }]));
+    const migrated = migrateScriptVault({ ...withoutNewFields, totalPracticeCount: 12, itemStats: practised });
     expect(migrated.totalPracticeCount).toBe(12);
     expect(migrated.items).toHaveLength(legacy.items.length);
-    expect(migrated.itemStats).toEqual({});
     expect(migrated.dayStreak).toBe(0);
+  });
+
+  it("retires unpractised starter scripts from the removed example persona, keeping everything else", () => {
+    const personal = { ...LEGACY_STARTERS[0], id: "mine-work-1-0" };
+    const migrated = migrateScriptVault({
+      ...createDefaultMasterRepository(),
+      items: [...LEGACY_STARTERS, personal],
+      itemStats: { [LEGACY_STARTERS[1].id]: { reps: 1, bestAccentScore: 60, lastPracticedAt: 1 } },
+    });
+    expect(migrated.items.map((s) => s.id).sort()).toEqual([LEGACY_STARTERS[1].id, "mine-work-1-0"].sort());
   });
 
   it("drops malformed script items and recovers from garbage", () => {

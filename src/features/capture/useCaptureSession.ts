@@ -32,6 +32,7 @@ export function useCaptureSession(profile: CandidateProfile) {
   const cuedStageRef = useRef<string | null>(null);
   const seenTurnRef = useRef(0);
   const gradingRef = useRef(false);
+  const secondsRef = useRef(0);
 
   const speech = useCallback(() => {
     speechRef.current ??= new SpeechEngine({ onCoachSpeaking: setCoachSpeaking });
@@ -207,6 +208,12 @@ export function useCaptureSession(profile: CandidateProfile) {
   }, [state.status, state.liveStatus]);
 
   // Save the interview as it happens so a refresh or crash loses nothing.
+  // The clock is read through a ref: if it were a dependency, its 1 s tick would
+  // restart the 1.5 s debounce below before it could ever fire.
+  useEffect(() => {
+    secondsRef.current = state.seconds;
+  }, [state.seconds]);
+
   useEffect(() => {
     if (state.status !== "live" || !state.lesson || state.transcript.length === 0) return;
     const id = setTimeout(
@@ -216,14 +223,14 @@ export function useCaptureSession(profile: CandidateProfile) {
           band: state.band,
           transcript: state.transcript,
           stage: state.stage,
-          seconds: state.seconds,
+          seconds: secondsRef.current,
           startedAt: state.startedAt,
           updatedAt: Date.now(),
         }),
       1500
     );
     return () => clearTimeout(id);
-  }, [state.status, state.lesson, state.band, state.transcript, state.stage, state.seconds, state.startedAt]);
+  }, [state.status, state.lesson, state.band, state.transcript, state.stage, state.startedAt]);
 
   // Grade once, then hand over to the report page.
   useEffect(() => {

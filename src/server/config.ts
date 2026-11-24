@@ -43,6 +43,13 @@ const LIVE_MODEL_IDS = new Set<string>([...LIVE_MODELS.map((m) => m.id), LIVE_MO
 export const MODEL_AUDIO_ENGINE: "live" | "tts" = process.env.MODEL_AUDIO_ENGINE?.trim() === "tts" ? "tts" : "live";
 export const LIVE_RENDER_MODEL = process.env.LIVE_RENDER_MODEL?.trim() || LIVE_MODEL;
 
+/**
+ * Set TRUST_PROXY=1 only when the app runs behind a proxy that overwrites
+ * X-Forwarded-For. Otherwise that header is client-controlled and must not
+ * decide who a request "is" for rate limiting.
+ */
+export const TRUST_PROXY = process.env.TRUST_PROXY === "1";
+
 /** Extra origins allowed to call the API (comma-separated), e.g. a staging domain. */
 export const ALLOWED_ORIGINS = list(process.env.ALLOWED_ORIGINS, "");
 

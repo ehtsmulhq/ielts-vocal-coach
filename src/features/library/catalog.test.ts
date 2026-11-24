@@ -12,6 +12,13 @@ describe("catalog", () => {
     expect(buildPacks(starters, true).map((p) => p.id)).toEqual(["mine", "ielts-speaking"]);
   });
 
+  it("treats accepted scripts as personal even when no interview history was written", () => {
+    const mine = [{ ...SHADOWING_LIBRARY[0], id: "mine-work-1-0" }];
+    const packs = buildPacks(mine, false);
+    expect(packs.map((p) => p.id)).toEqual(["mine", "ielts-speaking"]);
+    expect(packs[0].name).toBe("My scripts");
+  });
+
   it("finds scripts and their neighbours", () => {
     const packs = buildPacks(starters, false);
     const loc = findScript(packs, SHADOWING_LIBRARY[1].id)!;

@@ -1,4 +1,4 @@
-import { AUDIO_CACHE_DB, LEGACY_KEYS, STORAGE_KEYS } from "./registry";
+import { AUDIO_CACHE_DB, LEGACY_KEYS, SESSION_KEYS, STORAGE_KEYS } from "./registry";
 import { browserStorage, resetAllStores } from "./store";
 
 /** Removes keys left by older app versions. Never touches current data. */
@@ -14,13 +14,20 @@ export function cleanupLegacyKeys(): void {
   }
 }
 
-function deleteAudioCache(): Promise<void> {
+/** Resolves once the database is really gone (or after a safety timeout if something keeps it open). */
+function deleteAudioCache(timeoutMs = 5000): Promise<void> {
   return new Promise((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs);
+    const done = () => {
+      clearTimeout(timer);
+      resolve();
+    };
     try {
       const req = indexedDB.deleteDatabase(AUDIO_CACHE_DB);
-      req.onsuccess = req.onerror = req.onblocked = () => resolve();
+      // onblocked only means other connections are still closing: keep waiting for onsuccess.
+      req.onsuccess = req.onerror = done;
     } catch {
-      resolve();
+      done();
     }
   });
 }
@@ -39,6 +46,11 @@ export async function wipeAllUserData(): Promise<void> {
         /* ignore */
       }
     }
+  }
+  try {
+    for (const key of Object.values(SESSION_KEYS)) sessionStorage.removeItem(key);
+  } catch {
+    /* ignore */
   }
   resetAllStores();
   const { clearModelAudioMemoryCache } = await import("@/lib/model-audio");

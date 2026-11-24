@@ -1,4 +1,4 @@
-# Accent Shadowing Gym
+# Sounds Like You
 
 > Build a British RP accent through **shadowing**: listen to a model voice, copy it phrase by phrase, and repeat until the accent lives in your muscle memory.
 

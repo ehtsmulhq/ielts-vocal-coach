@@ -12,6 +12,8 @@ export interface Attempt {
     intonation: number;
     sounds: number;
   };
+  /** The one thing the coach said to work on next (kept so the next lesson can follow up). */
+  focusTip?: string;
 }
 
 export const MAX_ATTEMPTS = 500;

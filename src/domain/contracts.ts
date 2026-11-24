@@ -9,12 +9,22 @@ import { z } from "zod";
 export const TargetBandSchema = z.enum(["5.5", "6.5", "7.5"]);
 export const StageSchema = z.enum(["part1", "part2", "part3"]);
 
-/** Names are interpolated into the examiner prompt, so only plain name characters are allowed. */
-const PersonName = z
-  .string()
-  .trim()
-  .max(60)
-  .regex(/^[\p{L}\p{M} .'-]*$/u, "may only contain letters, spaces, apostrophes, hyphens and full stops");
+/**
+ * Names are interpolated into prompts, so only plain name characters survive.
+ * Anything else the profile form allows (digits, brackets, typographic
+ * apostrophes) is normalised away rather than rejected, so a saved profile can
+ * never make an interview or lesson fail.
+ */
+export function cleanName(raw: string): string {
+  return raw
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[^\p{L}\p{M} .'-]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+}
+
+const PersonName = z.string().max(200).transform(cleanName);
 
 /** ~7.5 MB of base64 ≈ 5.6 MB of audio: about 3 minutes of WAV or far longer as Opus. */
 export const MAX_AUDIO_BASE64_CHARS = 7_500_000;
@@ -142,25 +152,69 @@ const Capped = (n: number) => z.string().max(n);
 export const TutorScriptSchema = z.object({
   title: Capped(120),
   question: Capped(300),
-  upgradedScript: z.string().min(1).max(MAX_SCRIPT_CHARS),
-  thoughtChunks: z.array(Capped(500)).max(60),
-  stressedWords: z.array(Capped(60)).max(20),
-  targetCollocations: z.array(z.object({ phrase: Capped(120), meaning: Capped(300), phoneticTip: Capped(300) })).max(10),
+  // A spoken answer is well under 1,500 characters; a short cap limits what a caller can put in the prompt.
+  upgradedScript: z.string().min(1).max(1500),
+  thoughtChunks: z.array(Capped(300)).max(30),
+  stressedWords: z.array(Capped(40)).max(12),
+  targetCollocations: z.array(z.object({ phrase: Capped(100), meaning: Capped(200), phoneticTip: Capped(200) })).max(6),
 });
+
+const Count = z.number().int().min(0).max(100_000);
+const Score = z.number().min(0).max(100);
+
+/** What the coach knows about the learner when a lesson starts. Every field is optional. */
+export const TutorContextSchema = z.object({
+  // This script
+  focusArea: z.enum(["sounds", "stress", "rhythm", "intonation"]).optional(),
+  lastScore: Score.optional(),
+  previousScore: Score.optional(),
+  bestScore: Score.optional(),
+  reps: Count.optional(),
+  daysSinceScriptPractice: Count.optional(),
+  lastFocusTip: z.string().max(300).optional(),
+  // Right now
+  phase: z.enum(["listen", "shadow", "deliver", "result"]).optional(),
+  partOfDay: z.enum(["morning", "afternoon", "evening", "night"]).optional(),
+  // Habits
+  lessonsToday: Count.optional(),
+  minutesSinceLastLesson: Count.optional(),
+  daysSinceLastPractice: Count.optional(),
+  repsToday: Count.optional(),
+  streakDays: Count.optional(),
+  totalLessons: Count.optional(),
+  totalReps: Count.optional(),
+});
+export type TutorContext = z.output<typeof TutorContextSchema>;
 
 export const TutorTokenRequestSchema = z.object({
   tutorId: z.string().max(20),
   learnerName: PersonName.default(""),
-  script: TutorScriptSchema,
-  context: z
-    .object({
-      focusArea: z.enum(["sounds", "stress", "rhythm", "intonation"]).optional(),
-      lastScore: z.number().min(0).max(100).optional(),
-      reps: z.number().int().min(0).max(100000).optional(),
-    })
-    .default({}),
+  /** Absent when the lesson (re)connects while the learner is away from a practice page. */
+  script: TutorScriptSchema.optional(),
+  context: TutorContextSchema.default({}),
+  /** Continues an earlier conversation (Gemini Live session resumption). */
+  resumeHandle: z
+    .string()
+    .max(512)
+    .regex(/^[A-Za-z0-9_\-./=+]+$/, "invalid handle")
+    .optional(),
 });
 export type TutorTokenRequest = z.output<typeof TutorTokenRequestSchema>;
+
+// ---------------------------------------------------------------- greeting
+/** The coach's short spoken greeting on Today, written from the learner's situation. */
+export const GreetingRequestSchema = z.object({
+  tutorId: z.string().max(20),
+  learnerName: PersonName.default(""),
+  context: TutorContextSchema.default({}),
+  suggestion: z.object({ topic: Capped(120), question: Capped(300) }).optional(),
+});
+export type GreetingRequest = z.output<typeof GreetingRequestSchema>;
+
+export const GreetingResponseSchema = z.object({
+  text: z.string().min(1).max(400),
+});
+export type GreetingResponse = z.output<typeof GreetingResponseSchema>;
 
 // ---------------------------------------------------------------- lesson
 export const LessonRequestSchema = z.object({

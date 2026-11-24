@@ -41,7 +41,7 @@ export function applyBackup(storage: StorageLike, text: string): RestoreResult {
     return { ok: false, error: "This file is not valid JSON." };
   }
   const parsed = backupSchema.safeParse(json);
-  if (!parsed.success) return { ok: false, error: "This is not an Accent Shadowing Gym backup file." };
+  if (!parsed.success) return { ok: false, error: "This is not a Sounds Like You backup file." };
 
   const toRestore = Object.entries(parsed.data.entries).filter(([key]) => KNOWN_KEYS.has(key));
   for (const [key, raw] of toRestore) {

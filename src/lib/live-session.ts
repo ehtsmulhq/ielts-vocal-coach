@@ -24,6 +24,10 @@ export interface LiveCallbacks {
   onMicVolume?: (volume: number) => void;
   onTutorSpeaking?: (speaking: boolean) => void;
   onTelemetry?: (telemetry: NetworkTelemetry) => void;
+  /** A handle that lets a new connection continue this conversation (session resumption). */
+  onResumeHandle?: (handle: string) => void;
+  /** The server will close this connection soon (connection lifetime limit). */
+  onGoAway?: () => void;
 }
 
 export interface LiveConfig {
@@ -59,6 +63,7 @@ export class LiveSession {
   private nextPlayTime = 0;
   private ready = false;
   private muted = false;
+  private playbackHeld = false;
   private closedByUser = false;
   private decoder = new TextDecoder();
 
@@ -265,8 +270,13 @@ export class LiveSession {
 
   private handleMessage(msg: Record<string, any>) { // eslint-disable-line @typescript-eslint/no-explicit-any
     const sc = msg.serverContent;
+    const update = msg.sessionResumptionUpdate;
+    if (update?.resumable !== false && typeof update?.newHandle === "string" && update.newHandle) {
+      this.cb.onResumeHandle?.(update.newHandle);
+    }
     if (msg.goAway) {
       this.cb.onStatus("live", "Server session limit approaching.");
+      this.cb.onGoAway?.();
     }
     if (!sc) return;
 
@@ -274,7 +284,8 @@ export class LiveSession {
       this.interruptTutor();
     }
 
-    const parts = sc.modelTurn?.parts ?? [];
+    // While the learner is practising, anything the coach was still saying is dropped, not played late over the model.
+    const parts = this.playbackHeld ? [] : (sc.modelTurn?.parts ?? []);
     let hasAudio = false;
     for (const part of parts) {
       if (part.inlineData?.data) {
@@ -307,7 +318,7 @@ export class LiveSession {
     if (sc.inputTranscription?.text) {
       this.cb.onTranscript("student", sc.inputTranscription.text);
     }
-    if (sc.outputTranscription?.text) {
+    if (sc.outputTranscription?.text && !this.playbackHeld) {
       this.cb.onTranscript("tutor", sc.outputTranscription.text);
     }
 
@@ -401,6 +412,25 @@ export class LiveSession {
 
   setMuted(muted: boolean) {
     this.muted = muted;
+  }
+
+  /** While held, the coach's incoming speech is discarded (neither played nor captioned). */
+  setPlaybackHeld(held: boolean) {
+    this.playbackHeld = held;
+  }
+
+  /**
+   * True when the browser hasn't let audio start yet. That happens when a
+   * session reconnects without a click (after a reload, say): the coach can't
+   * be heard or hear the mic until `resumeAudio` runs from a user gesture.
+   */
+  get audioBlocked(): boolean {
+    return this.playCtx?.state === "suspended" || this.micCtx?.state === "suspended";
+  }
+
+  /** Call from a click or key press to unblock audio after an automatic reconnect. */
+  async resumeAudio(): Promise<void> {
+    await Promise.all([this.micCtx?.resume(), this.playCtx?.resume()].filter(Boolean));
   }
 
   stop() {

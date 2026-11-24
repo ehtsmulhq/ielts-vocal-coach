@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { checkRateLimit, guardJson, isAllowedOrigin } from "./guard";
+import { checkRateLimit, clientKey, guardJson, isAllowedOrigin } from "./guard";
 import { extractPcm, pcm16ToWav, trimSilence, ttsToWav } from "./wav";
 import { resolveLiveModel, resolveVoice } from "./config";
 import { isRetryable } from "./gemini";
@@ -22,6 +22,30 @@ describe("rate limiting", () => {
     expect(checkRateLimit("k", limit, 2_000, store)).toEqual({ ok: false, retryAfterSec: 8 });
     expect(checkRateLimit("other", limit, 2_000, store)).toEqual({ ok: true });
     expect(checkRateLimit("k", limit, 10_001, store)).toEqual({ ok: true });
+  });
+});
+
+describe("client identity", () => {
+  it("ignores a client-set X-Forwarded-For unless a proxy is trusted", () => {
+    const a = post("{}", { "x-forwarded-for": "1.1.1.1" });
+    const b = post("{}", { "x-forwarded-for": "2.2.2.2" });
+    expect(clientKey(a, false)).toBe(clientKey(b, false));
+  });
+
+  it("uses the proxy's own hop (the last entry) when a proxy is trusted", () => {
+    const r = post("{}", { "x-forwarded-for": "6.6.6.6, 203.0.113.9" });
+    expect(clientKey(r, true)).toBe("203.0.113.9");
+  });
+
+  it("caps a route overall even when callers rotate headers", async () => {
+    const schema = z.object({});
+    const opts = { route: "rotating", maxBytes: 100, rateLimit: { max: 1, windowMs: 60_000 } };
+    let blocked = 0;
+    for (let i = 0; i < 25; i++) {
+      const res = await guardJson(post("{}", { "x-forwarded-for": `9.9.9.${i}` }), opts, schema);
+      if (!res.ok) blocked++;
+    }
+    expect(blocked).toBeGreaterThanOrEqual(15);
   });
 });
 

@@ -30,6 +30,7 @@ export function useRecorder() {
   const recognitionRef = useRef<Recognition | null>(null);
   const activeRef = useRef(false);
   const startedAtRef = useRef(0);
+  const startingRef = useRef(false);
   const transcriptRef = useRef("");
 
   const teardown = useCallback(() => {
@@ -46,7 +47,7 @@ export function useRecorder() {
     setLevel(0);
   }, []);
 
-  const start = useCallback(async () => {
+  const startRecording = useCallback(async () => {
     setError(null);
     setTranscript("");
     transcriptRef.current = "";
@@ -118,6 +119,17 @@ export function useRecorder() {
     setIsRecording(true);
     return true;
   }, []);
+
+  const start = useCallback(async () => {
+    // A second click while the permission prompt is open (or while recording) must not open another mic.
+    if (startingRef.current || activeRef.current) return false;
+    startingRef.current = true;
+    try {
+      return await startRecording();
+    } finally {
+      startingRef.current = false;
+    }
+  }, [startRecording]);
 
   /** Stops recording and returns the take (or null if nothing usable was captured). */
   const stop = useCallback(async (): Promise<Take | null> => {

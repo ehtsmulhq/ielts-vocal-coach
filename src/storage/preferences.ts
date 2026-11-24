@@ -14,6 +14,8 @@ export interface Preferences {
   modelVoice: string;
   /** Whether the first-run welcome has been completed or skipped. */
   onboarded: boolean;
+  /** Where the learner dragged the floating coach window (px from the top-left), or null for the default spot. */
+  coachPosition: { x: number; y: number } | null;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -22,7 +24,16 @@ export const DEFAULT_PREFERENCES: Preferences = {
   tutorId: DEFAULT_TUTOR_ID,
   modelVoice: getTutor(DEFAULT_TUTOR_ID).voice,
   onboarded: false,
+  coachPosition: null,
 };
+
+function migratePosition(v: unknown): Preferences["coachPosition"] {
+  if (typeof v !== "object" || v === null) return null;
+  const { x, y } = v as { x?: unknown; y?: unknown };
+  return typeof x === "number" && typeof y === "number" && Number.isFinite(x) && Number.isFinite(y)
+    ? { x: Math.round(x), y: Math.round(y) }
+    : null;
+}
 
 const RATES = [0.75, 0.85, 1];
 
@@ -37,6 +48,7 @@ export function migratePreferences(data: unknown): Preferences {
       return { tutorId: tutor.id, modelVoice: tutor.voice };
     })(),
     onboarded: d.onboarded === true,
+    coachPosition: migratePosition(d.coachPosition),
   };
 }
 

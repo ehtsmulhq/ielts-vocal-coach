@@ -1,6 +1,7 @@
 import type { ScriptItem } from "@/domain/contracts";
 import type { ItemStats } from "@/domain/stats";
 import { SHADOWING_LIBRARY } from "@/lib/shadowing-library";
+import { isStarterScript } from "@/domain/capture";
 
 /** A named collection of shadowing scripts. */
 export interface Pack {
@@ -15,7 +16,9 @@ export interface Pack {
  * generic starter scripts, so the curated pack is listed (and suggested) first.
  */
 export function buildPacks(myScripts: ScriptItem[], hasCaptured: boolean): Pack[] {
-  const mine: Pack = hasCaptured || myScripts.length === 0
+  // Personal scripts count even when the band report failed and no interview history was written.
+  const personal = hasCaptured || myScripts.some((s) => !isStarterScript(s));
+  const mine: Pack = personal || myScripts.length === 0
     ? {
         id: "mine",
         name: "My scripts",
@@ -34,7 +37,7 @@ export function buildPacks(myScripts: ScriptItem[], hasCaptured: boolean): Pack[
     description: "Original Cambridge-style model answers for Parts 1, 2 and 3.",
     scripts: SHADOWING_LIBRARY,
   };
-  return hasCaptured ? [mine, ielts] : [ielts, mine];
+  return personal ? [mine, ielts] : [ielts, mine];
 }
 
 export interface ScriptLocation {

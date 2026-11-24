@@ -34,7 +34,11 @@ function openDb(): Promise<IDBDatabase | null> {
     try {
       const req = indexedDB.open(DB_NAME, 1);
       req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-      req.onsuccess = () => resolve(req.result);
+      req.onsuccess = () => {
+        // If a wipe asks to delete the database, let go immediately.
+        req.result.onversionchange = () => req.result.close();
+        resolve(req.result);
+      };
       req.onerror = () => resolve(null);
     } catch {
       resolve(null);
@@ -46,9 +50,18 @@ async function dbGet(key: string): Promise<Blob | null> {
   const db = await openDb();
   if (!db) return null;
   return new Promise((resolve) => {
-    const req = db.transaction(STORE).objectStore(STORE).get(key);
-    req.onsuccess = () => resolve((req.result as Blob | undefined) ?? null);
-    req.onerror = () => resolve(null);
+    // Connections are closed after every use so "erase all data" can delete the database.
+    const done = (v: Blob | null) => {
+      db.close();
+      resolve(v);
+    };
+    try {
+      const req = db.transaction(STORE).objectStore(STORE).get(key);
+      req.onsuccess = () => done((req.result as Blob | undefined) ?? null);
+      req.onerror = () => done(null);
+    } catch {
+      done(null);
+    }
   });
 }
 
@@ -56,10 +69,19 @@ async function dbPut(key: string, blob: Blob): Promise<void> {
   const db = await openDb();
   if (!db) return;
   await new Promise<void>((resolve) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put(blob, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => resolve();
+    const done = () => {
+      db.close();
+      resolve();
+    };
+    try {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(blob, key);
+      tx.oncomplete = done;
+      tx.onerror = done;
+      tx.onabort = done;
+    } catch {
+      done();
+    }
   });
 }
 
@@ -84,8 +106,11 @@ export async function getModelAudio(text: string, voice?: string): Promise<Blob>
     });
     if (!res.ok) throw await readApiError(res, "The model voice is unavailable right now.");
     const blob = await res.blob();
-    memory.set(key, blob);
-    void dbPut(key, blob);
+    // A stand-in clip (the preferred voice was briefly unavailable) is used once, never cached.
+    if (res.headers.get("X-Voice-Fallback") !== "1") {
+      memory.set(key, blob);
+      void dbPut(key, blob);
+    }
     return blob;
   })().finally(() => inflight.delete(key));
   inflight.set(key, job);

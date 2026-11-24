@@ -10,7 +10,8 @@ import { getTutor } from "@/lib/tutors";
  * Single-use Live token for the learner's personal coach, locked to the coach's
  * voice and a teaching prompt built here. The script comes from the browser
  * (personal scripts are stored there), so every field is length-capped and the
- * prompt treats it as data.
+ * prompt treats it as data. With a resume handle, the new connection carries on
+ * the same conversation (after a reload or a dropped connection).
  */
 export async function POST(request: Request) {
   const guarded = await guardJson(request, { route: "tutor-token", ...LIMITS.tutor }, TutorTokenRequestSchema);
@@ -38,6 +39,10 @@ export async function POST(request: Request) {
             systemInstruction,
             inputAudioTranscription: {},
             outputAudioTranscription: {},
+            // Long lessons: older turns are summarised away instead of hitting the session length limit.
+            contextWindowCompression: { slidingWindow: {} },
+            // Lets a reload or dropped connection carry on the same conversation.
+            sessionResumption: guarded.data.resumeHandle ? { handle: guarded.data.resumeHandle } : {},
           },
         },
         lockAdditionalFields: [],

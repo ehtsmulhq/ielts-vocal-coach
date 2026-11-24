@@ -135,6 +135,8 @@ Use the \`pronunciation\` mistake type and \`phoneticTip\` (give the sound or st
       mode: "scoring",
       validate: MirrorCoachResponseSchema,
     });
+    // Accent scores only mean something when the model actually heard the learner's audio.
+    if (!audioBase64) delete data.accent;
     return Response.json(data);
   } catch (err) {
     return handleRouteError("mirror-coach", err);

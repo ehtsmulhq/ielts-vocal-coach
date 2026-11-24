@@ -16,10 +16,16 @@ import { ModelAudioRequestSchema } from "@/domain/contracts";
  */
 export const maxDuration = 120;
 
-function wavResponse(wav: Buffer, engine: string, model: string): Response {
-  return new Response(new Uint8Array(wav), {
-    headers: { "Content-Type": "audio/wav", "X-Voice-Engine": engine, "X-Voice-Model": model, "Cache-Control": "no-store" },
-  });
+function wavResponse(wav: Buffer, engine: string, model: string, fallback = false): Response {
+  const headers: Record<string, string> = {
+    "Content-Type": "audio/wav",
+    "X-Voice-Engine": engine,
+    "X-Voice-Model": model,
+    "Cache-Control": "no-store",
+  };
+  // Tells the browser this clip is a stand-in (Live failed), so it must not be cached as the real reading.
+  if (fallback) headers["X-Voice-Fallback"] = "1";
+  return new Response(new Uint8Array(wav), { headers });
 }
 
 async function renderLive(text: string, voice: string): Promise<Buffer | null> {
@@ -80,7 +86,7 @@ export async function POST(request: Request) {
       if (wav) return wavResponse(wav, "live", LIVE_RENDER_MODEL);
     }
     const { wav, model } = await renderTts(spoken, voice);
-    return wavResponse(wav, "tts", model);
+    return wavResponse(wav, "tts", model, MODEL_AUDIO_ENGINE === "live");
   } catch (err) {
     return handleRouteError("model-audio", err);
   }

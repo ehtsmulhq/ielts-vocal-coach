@@ -8,11 +8,11 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 const lora = Lora({ variable: "--font-lora", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Accent Shadowing Gym", template: "%s · Accent Shadowing Gym" },
+  title: { default: "Sounds Like You", template: "%s · Sounds Like You" },
   description:
     "Shadow a British RP model voice phrase by phrase, get accent feedback on every take, and build the accent into muscle memory.",
-  applicationName: "Accent Shadowing Gym",
-  appleWebApp: { capable: true, title: "Shadowing Gym", statusBarStyle: "default" },
+  applicationName: "Sounds Like You",
+  appleWebApp: { capable: true, title: "Sounds Like You", statusBarStyle: "default" },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 

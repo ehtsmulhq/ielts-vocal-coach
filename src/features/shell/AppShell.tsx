@@ -8,6 +8,8 @@ import { cn } from "@/ui/primitives";
 import { usePreferences } from "@/features/shared/stores";
 import { updatePreferences, type ThemePreference } from "@/storage/preferences";
 import { cleanupLegacyKeys } from "@/storage/wipe";
+import { CoachProvider } from "@/features/tutor/CoachProvider";
+import { CoachDock } from "@/features/tutor/CoachChat";
 
 const NAV = [
   { href: "/", label: "Today" },
@@ -81,6 +83,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
+    // The coach lives here, above the pages, so one lesson stays connected across navigation.
+    <CoachProvider>
     <div className="flex min-h-screen flex-col">
       <a
         href="#main"
@@ -88,10 +92,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
-      <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
+      <header data-app-header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3">
           <Link href="/" className="font-serif text-lg font-semibold tracking-tight">
-            Accent Shadowing Gym
+            Sounds Like You
           </Link>
           <div className="flex items-center gap-4">
             <nav aria-label="Main">
@@ -122,6 +126,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-8">
         {children}
       </main>
+      <CoachDock />
     </div>
+    </CoachProvider>
   );
 }
